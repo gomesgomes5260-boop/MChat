@@ -14,44 +14,58 @@ actor MockDatabase {
     var messages: [ChatMessage]
 
     init() {
-        let rootID = UUID()
-        let clientID = UUID()
+        let superID = UUID(), operatorID = UUID(), chatPlusID = UUID(), chatID = UUID()
 
-        let root = User(
-            id: rootID, name: "Lucas", email: "lucasgiovanny@gmail.com", phone: "937259259",
+        let superAdmin = User(
+            id: superID, name: "Adm Super", email: "super@mchat.app", phone: "11900000001",
             roles: [.superAdmin, .accountHolder], status: .active,
             createdAt: Date().addingTimeInterval(-86400 * 60),
             invitedByUserID: nil, inviteID: nil,
             wallet: {
                 var w = Wallet.empty
-                w.balances[.brl] = Money(amountMinor: 50_000, currency: .brl)
+                w.balances[.brl] = Money(amountMinor: 1_000_000, currency: .brl)
+                w.balances[.usd] = Money(amountMinor: 200_000, currency: .usd)
                 return w
             }()
         )
 
-        let invite = Invite(
-            id: UUID(), code: Invite.generateCode(), createdBy: rootID,
-            invitedContact: "appreview@finly.com.br", status: .accepted,
+        let operatorUser = User(
+            id: operatorID, name: "Operador", email: "operador@mchat.app", phone: "11900000002",
+            roles: [.withdrawalOperator, .paymentOperator], status: .active,
             createdAt: Date().addingTimeInterval(-86400 * 30),
+            invitedByUserID: superID, inviteID: nil,
+            wallet: .empty
+        )
+
+        // Convite aceito: Chat Plus convidou o usuário Chat.
+        let invite = Invite(
+            id: UUID(), code: Invite.generateCode(), createdBy: chatPlusID,
+            invitedContact: "11900000003", status: .accepted,
+            createdAt: Date().addingTimeInterval(-86400 * 15),
             expiresAt: Date().addingTimeInterval(86400 * 30),
-            acceptedByUserID: clientID, acceptedAt: Date().addingTimeInterval(-86400 * 29),
+            acceptedByUserID: chatID, acceptedAt: Date().addingTimeInterval(-86400 * 14),
             revokedBy: nil, revokedAt: nil,
             grantedRoles: [.chatOnly]
         )
 
-        let client = User(
-            id: clientID, name: "App Review", email: "appreview@finly.com.br", phone: "11988887777",
-            roles: [.accountHolder, .admin], status: .active,
-            createdAt: Date().addingTimeInterval(-86400 * 29),
-            invitedByUserID: rootID, inviteID: invite.id,
-            wallet: {
-                var w = Wallet.empty
-                w.balances[.brl] = Money(amountMinor: 1_250_000, currency: .brl)
-                return w
-            }()
+        let chatPlusUser = User(
+            id: chatPlusID, name: "Chat Plus", email: nil, phone: "11900000004",
+            roles: [.chatPlus], status: .active,
+            createdAt: Date().addingTimeInterval(-86400 * 20),
+            invitedByUserID: superID, inviteID: nil,
+            inviteLimit: 3,
+            wallet: .empty
         )
 
-        users = [root, client]
+        let chatUser = User(
+            id: chatID, name: "Chat", email: nil, phone: "11900000003",
+            roles: [.chatOnly], status: .active,
+            createdAt: Date().addingTimeInterval(-86400 * 14),
+            invitedByUserID: chatPlusID, inviteID: invite.id,
+            wallet: .empty
+        )
+
+        users = [superAdmin, operatorUser, chatPlusUser, chatUser]
         invites = [invite]
         withdrawals = []
         payments = []
@@ -97,6 +111,7 @@ struct MockAuthService: AuthServicing {
             status: .pendingApproval,
             createdAt: Date(),
             invitedByUserID: invite.createdBy, inviteID: invite.id,
+            inviteLimit: invite.grantedRoles.contains(.chatPlus) ? 3 : nil,
             wallet: .empty
         )
         invite.status = .accepted
@@ -143,6 +158,14 @@ struct MockUserAdminService: UserAdminServicing {
         await db.upsert(target)
         return target
     }
+
+    func updateInviteLimit(userID: UUID, limit: Int?, actingUser: User) async throws -> User {
+        guard actingUser.can(.manageInviteLimits) else { throw ServiceError.notAuthorized }
+        guard var target = await db.users.first(where: { $0.id == userID }) else { throw ServiceError.notFound }
+        target.inviteLimit = limit
+        await db.upsert(target)
+        return target
+    }
 }
 
 // MARK: - Convites
@@ -152,6 +175,13 @@ struct MockInviteService: InviteServicing {
 
     func createInvite(from user: User, contact: String?, grantedRoles: Set<Role>) async throws -> Invite {
         guard user.can(.createInvites) else { throw ServiceError.notAuthorized }
+        // Limite de convites (revogados/expirados não contam).
+        if let limit = user.inviteLimit {
+            let used = await db.invites.filter {
+                $0.createdBy == user.id && $0.status != .revoked && $0.status != .expired
+            }.count
+            guard used < limit else { throw ServiceError.inviteLimitReached }
+        }
         // Ninguém concede roles acima das próprias: as roles do convite
         // precisam estar contidas nas permissões de quem convida.
         let grantable = Self.grantableRoles(by: user)
@@ -172,8 +202,9 @@ struct MockInviteService: InviteServicing {
     static func grantableRoles(by user: User) -> Set<Role> {
         if user.isSuperAdmin { return Set(Role.allCases) }
         if user.roles.contains(.admin) {
-            return [.accountHolder, .chatOnly, .withdrawalOperator, .paymentOperator, .financeManager]
+            return [.accountHolder, .chatPlus, .chatOnly, .withdrawalOperator, .paymentOperator, .financeManager]
         }
+        // Chat Plus e correntistas convidam apenas usuários de chat.
         return [.chatOnly]
     }
 

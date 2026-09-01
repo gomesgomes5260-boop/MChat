@@ -44,13 +44,28 @@ final class InviteTests: XCTestCase {
         // Super admin concede qualquer role.
         XCTAssertEqual(MockInviteService.grantableRoles(by: makeUser(roles: [.superAdmin])),
                        Set(Role.allCases))
-        // ADM concede roles operacionais, mas nunca super admin.
+        // ADM concede roles operacionais (incluindo Chat Plus), nunca super admin.
         let admGrantable = MockInviteService.grantableRoles(by: makeUser(roles: [.admin]))
         XCTAssertFalse(admGrantable.contains(.superAdmin))
         XCTAssertTrue(admGrantable.contains(.withdrawalOperator))
-        // Usuário comum só convida para "somente chat".
-        XCTAssertEqual(MockInviteService.grantableRoles(by: makeUser(roles: [.chatOnly])),
+        XCTAssertTrue(admGrantable.contains(.chatPlus))
+        // Chat Plus só convida usuários de chat.
+        XCTAssertEqual(MockInviteService.grantableRoles(by: makeUser(roles: [.chatPlus])),
                        [.chatOnly])
+    }
+
+    func testChatPlusInviteLimitBlocksCreation() async throws {
+        var plus = makeUser(roles: [.chatPlus])
+        plus.inviteLimit = 0
+        let service = MockInviteService()
+        do {
+            _ = try await service.createInvite(from: plus, contact: "11911112222", grantedRoles: [.chatOnly])
+            XCTFail("Deveria ter estourado o limite de convites")
+        } catch let error as ServiceError {
+            guard case .inviteLimitReached = error else {
+                return XCTFail("Erro inesperado: \(error)")
+            }
+        }
     }
 
     func testMoneyFormattingUsesMinorUnits() {

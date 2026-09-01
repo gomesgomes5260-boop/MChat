@@ -190,7 +190,7 @@
 const PERMS = ['viewDashboard','viewClients','manageClients','viewBalances','manageAssets',
   'viewWithdrawals','approveWithdrawals','viewPayments','processPayments',
   'viewUsers','editRoles','promoteClient','createInvites','viewOwnInvites',
-  'viewAllInvites','revokeInvites','useChat','useVoiceCalls'];
+  'viewAllInvites','revokeInvites','manageInviteLimits','useChat','useVoiceCalls'];
 
 const ROLES = {
   super_admin:{label:'Super Admin', perms:PERMS},
@@ -201,7 +201,8 @@ const ROLES = {
   withdrawal_operator:{label:'Operador de Saques', perms:['viewDashboard','viewWithdrawals','approveWithdrawals','viewOwnInvites','useChat']},
   payment_operator:{label:'Operador de Pagamentos', perms:['viewDashboard','viewPayments','processPayments','viewOwnInvites','useChat']},
   correntista:{label:'Correntista', perms:['viewBalances','createInvites','viewOwnInvites','useChat','useVoiceCalls']},
-  somente_chat:{label:'Somente Chat', perms:['createInvites','viewOwnInvites','useChat','useVoiceCalls']}
+  chat_plus:{label:'Chat Plus', perms:['createInvites','viewOwnInvites','useChat','useVoiceCalls']},
+  somente_chat:{label:'Somente Chat', perms:['useChat','useVoiceCalls']}
 };
 
 function userPerms(u){
@@ -212,8 +213,13 @@ function userPerms(u){
 function can(u,p){ return !!u && u.status==='active' && userPerms(u).has(p); }
 function grantableRoles(u){
   if((u.roles||[]).includes('super_admin')) return Object.keys(ROLES);
-  if((u.roles||[]).includes('adm')) return ['correntista','somente_chat','withdrawal_operator','payment_operator','finance_manager'];
+  if((u.roles||[]).includes('adm')) return ['correntista','chat_plus','somente_chat','withdrawal_operator','payment_operator','finance_manager'];
+  // Chat Plus e correntistas convidam apenas usuários de chat.
   return ['somente_chat'];
+}
+/* Convites que contam contra o limite do usuário (revogado/expirado libera a vaga). */
+function inviteUsage(u){
+  return DB.invites.filter(i=>i.createdBy===u.id && i.status!=='revoked' && i.status!=='expired').length;
 }
 
 /* ---------------- utilidades ---------------- */
@@ -246,43 +252,41 @@ const WD_BADGE = {pending:'b-warn',approved:'b-blue',completed:'b-ok',cancelled:
 const PAY_TYPES = {pix:'PIX',transfer:'Transferência',boleto:'Boleto',wire:'Wire Internacional'};
 
 /* ---------------- banco local + sync ---------------- */
-const DB_KEY = 'mchat_db_v1';
+const DB_KEY = 'mchat_db_v2';
 const bc = new BroadcastChannel('mchat_sync');
 
 function seedDB(){
-  const lucasId = uid(), reviewId = uid(), opId = uid(), chatId = uid();
+  const superId = uid(), opId = uid(), chatId = uid(), plusId = uid();
   const now = Date.now(), day = 86400000;
   const wallet = (brl=0,usd=0,eur=0,gbp=0)=>({BRL:brl,USD:usd,EUR:eur,GBP:gbp});
-  const invAceito = {id:uid(),code:inviteCode(),phone:'11988887777',createdBy:lucasId,
-    grantedRoles:['correntista'],status:'accepted',createdAt:now-30*day,expiresAt:now+day,
-    acceptedBy:reviewId,acceptedAt:now-29*day,revokedBy:null,revokedAt:null};
+  const invChat = {id:uid(),code:inviteCode(),phone:'11900000003',createdBy:plusId,
+    grantedRoles:['somente_chat'],status:'accepted',createdAt:now-15*day,expiresAt:now+day,
+    acceptedBy:chatId,acceptedAt:now-14*day,revokedBy:null,revokedAt:null};
   return {
     users:[
-      {id:lucasId,name:'Lucas',phone:'937259259',email:'lucasgiovanny@gmail.com',pass:'admin123',
+      {id:superId,name:'Adm Super',phone:'11900000001',email:'super@mchat.app',pass:'super123',
        roles:['super_admin','correntista'],status:'active',createdAt:now-60*day,invitedBy:null,inviteId:null,
-       wallet:wallet(50000,120000,0,0)},
-      {id:reviewId,name:'App Review',phone:'11988887777',email:'appreview@finly.com.br',pass:'review123',
-       roles:['correntista','adm'],status:'active',createdAt:now-29*day,invitedBy:lucasId,inviteId:invAceito.id,
-       wallet:wallet(1250000,0,30000,0)},
-      {id:opId,name:'Rodrigo Operador',phone:'22999489728',email:'rodrigo@finly.com.br',pass:'op123',
-       roles:['withdrawal_operator','payment_operator'],status:'active',createdAt:now-20*day,invitedBy:lucasId,inviteId:null,
-       wallet:wallet()},
-      {id:chatId,name:'Pat Souza',phone:'22988052238',email:null,pass:'chat123',
-       roles:['somente_chat'],status:'active',createdAt:now-10*day,invitedBy:reviewId,inviteId:null,
-       wallet:wallet()}
+       inviteLimit:null,wallet:wallet(1000000,200000,50000,30000)},
+      {id:opId,name:'Operador',phone:'11900000002',email:'operador@mchat.app',pass:'operador123',
+       roles:['withdrawal_operator','payment_operator'],status:'active',createdAt:now-30*day,invitedBy:superId,inviteId:null,
+       inviteLimit:null,wallet:wallet()},
+      {id:plusId,name:'Chat Plus',phone:'11900000004',email:null,pass:'plus123',
+       roles:['chat_plus'],status:'active',createdAt:now-20*day,invitedBy:superId,inviteId:null,
+       inviteLimit:3,wallet:wallet()},
+      {id:chatId,name:'Chat',phone:'11900000003',email:null,pass:'chat123',
+       roles:['somente_chat'],status:'active',createdAt:now-14*day,invitedBy:plusId,inviteId:invChat.id,
+       inviteLimit:null,wallet:wallet()}
     ],
     invites:[
-      invAceito,
-      {id:uid(),code:inviteCode(),phone:'11999990000',createdBy:lucasId,grantedRoles:['correntista'],
-       status:'pending',createdAt:now-day,expiresAt:now+6*day,acceptedBy:null,acceptedAt:null,revokedBy:null,revokedAt:null},
-      {id:uid(),code:inviteCode(),phone:'21988881234',createdBy:reviewId,grantedRoles:['somente_chat'],
-       status:'pending',createdAt:now-2*day,expiresAt:now+5*day,acceptedBy:null,acceptedAt:null,revokedBy:null,revokedAt:null}
+      invChat,
+      {id:uid(),code:inviteCode(),phone:'11999990000',createdBy:plusId,grantedRoles:['somente_chat'],
+       status:'pending',createdAt:now-day,expiresAt:now+6*day,acceptedBy:null,acceptedAt:null,revokedBy:null,revokedAt:null}
     ],
     withdrawals:[
-      {id:uid(),clientId:reviewId,amount:20000,currency:'BRL',status:'pending',requestedAt:now-3600e3,decidedBy:null,decidedAt:null}
+      {id:uid(),clientId:superId,amount:20000,currency:'BRL',status:'pending',requestedAt:now-3600e3,decidedBy:null,decidedAt:null}
     ],
     payments:[
-      {id:uid(),clientId:reviewId,type:'pix',beneficiary:'Fornecedor XPTO Ltda',amount:55000,currency:'BRL',
+      {id:uid(),clientId:superId,type:'pix',beneficiary:'Fornecedor XPTO Ltda',amount:55000,currency:'BRL',
        status:'pending',requestedAt:now-7200e3,processedBy:null,processedAt:null}
     ],
     messages:[]
@@ -451,7 +455,9 @@ function registerMobile(name,pass){
   if(!name.trim() || pass.length<4){ S.authErr='Preencha o nome e uma senha com 4+ caracteres.'; render(); return; }
   const u = {id:uid(),name:name.trim(),phone:inv.phone,email:null,pass,
     roles:[...inv.grantedRoles],status:'pending',createdAt:Date.now(),
-    invitedBy:inv.createdBy,inviteId:inv.id,wallet:{BRL:0,USD:0,EUR:0,GBP:0}};
+    invitedBy:inv.createdBy,inviteId:inv.id,
+    inviteLimit:inv.grantedRoles.includes('chat_plus')?3:null,
+    wallet:{BRL:0,USD:0,EUR:0,GBP:0}};
   inv.status='accepted'; inv.acceptedBy=u.id; inv.acceptedAt=Date.now();
   DB.users.push(u); setUser(u.id); S.mobileScreen='main'; S.regStep=1; S.regInvite=null;
   save(); toast('Conta criada — aguardando aprovação de um administrador.');
@@ -459,6 +465,10 @@ function registerMobile(name,pass){
 function createInvite(phone,roles){
   const u = me();
   if(!can(u,'createInvites')){ S.modalErr='Sem permissão para convidar.'; render(); return; }
+  if(u.inviteLimit!=null && inviteUsage(u)>=u.inviteLimit){
+    S.modalErr=`Limite de convites atingido (${inviteUsage(u)}/${u.inviteLimit}). Peça ao Super Admin para aumentar seu limite.`;
+    render(); return;
+  }
   const n = normPhone(phone);
   if(n.length<8){ S.modalErr='Informe o telefone do convidado (com DDD).'; render(); return; }
   if(DB.users.some(x=>normPhone(x.phone)===n)){ S.modalErr='Este número já possui conta.'; render(); return; }
@@ -497,7 +507,20 @@ function saveRoles(id,roles){
     S.modalErr='Só um Super Admin concede ou remove a role Super Admin.'; render(); return;
   }
   if(!roles.length){ S.modalErr='Selecione ao menos uma role.'; render(); return; }
+  if(roles.includes('chat_plus') && target.inviteLimit==null) target.inviteLimit=3;
   target.roles=roles; S.modal=null; S.modalErr=null; save(); toast('Roles atualizadas.');
+}
+function saveInviteLimit(id,raw){
+  if(!can(me(),'manageInviteLimits')){ S.modalErr='Só o Super Admin gerencia limites de convite.'; render(); return; }
+  const target = userById(id); if(!target) return;
+  const trimmed = String(raw).trim();
+  if(trimmed===''){ target.inviteLimit=null; }
+  else{
+    const n = parseInt(trimmed,10);
+    if(!Number.isInteger(n)||n<0){ S.modalErr='Informe um número inteiro (ou vazio para ilimitado).'; render(); return; }
+    target.inviteLimit=n;
+  }
+  S.modal=null; S.modalErr=null; save(); toast('Limite de convites atualizado.');
 }
 function requestWithdrawal(amountStr,currency){
   const u = me(), cents = parseMoney(amountStr);
@@ -552,7 +575,7 @@ function sendMsg(toId,text){
 /* ---------------- helpers de UI ---------------- */
 function roleChips(roles){
   return (roles||[]).map(r=>{
-    const cls = r==='super_admin' ? 'b-super' : r==='adm' ? 'b-ok' : r==='correntista' ? 'b-blue' : 'b-gray';
+    const cls = r==='super_admin' ? 'b-super' : r==='adm' ? 'b-ok' : r==='correntista' ? 'b-blue' : r==='chat_plus' ? 'b-info' : 'b-gray';
     return `<span class="badge ${cls}">${esc(ROLES[r]?.label||r)}</span>`;
   }).join(' ');
 }
@@ -604,9 +627,12 @@ function viewLauncher(){
       </button>
     </div>
     <div class="hint">
-      <b>Para testar chat e ligação:</b> abra esta página em <b>duas abas</b>, entre com usuários
-      diferentes (ex.: Lucas <span class="num">937259259</span>/admin123 e Pat
-      <span class="num">22988052238</span>/chat123) e converse ou ligue entre elas.
+      <b>Usuários de teste</b> (telefone / senha) —
+      Adm Super: <span class="num">11900000001</span>/super123 ·
+      Operador: <span class="num">11900000002</span>/operador123 ·
+      Chat: <span class="num">11900000003</span>/chat123 ·
+      Chat Plus: <span class="num">11900000004</span>/plus123.<br>
+      <b>Chat e ligação:</b> abra em <b>duas abas</b> com usuários diferentes.
       Telefone com convite pré-registrado para testar cadastro: <b class="num">11999990000</b>.
     </div>
     <button class="btn btn-sm" onclick="resetDB()">↺ Recriar base de demonstração</button>
@@ -666,7 +692,7 @@ function viewAdminLogin(){
     <button class="btn btn-dark" style="width:100%;justify-content:center"
       onclick="loginAdmin(document.getElementById('ad-email').value,document.getElementById('ad-pass').value)">Entrar</button>
     <p style="margin-top:14px;font-size:12.5px;color:var(--ink-3)">
-      Demo: lucasgiovanny@gmail.com / admin123 · rodrigo@finly.com.br / op123</p>
+      Demo: super@mchat.app / super123 (tudo) · operador@mchat.app / operador123 (saques e pagamentos)</p>
   </div></div>`;
 }
 
@@ -810,23 +836,25 @@ function pagePayments(u){
 }
 
 function pageUsers(u){
-  const adminRoles=['super_admin','adm','finance_manager','withdrawal_operator','payment_operator'];
-  const list = DB.users.filter(x=>x.roles.some(r=>adminRoles.includes(r)));
+  const listedRoles=['super_admin','adm','finance_manager','withdrawal_operator','payment_operator','chat_plus'];
+  const list = DB.users.filter(x=>x.roles.some(r=>listedRoles.includes(r)));
   return `
   <div class="panel">
-    <div class="head">Usuários com funções administrativas
+    <div class="head">Usuários com funções especiais
       ${can(u,'promoteClient')?`<button class="btn btn-dark btn-sm" onclick="openModal('promote')">➕ Promover Cliente</button>`:''}
     </div>
     <table>
-    <thead><tr><th>Nome</th><th>E-mail</th><th>Roles</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
+    <thead><tr><th>Nome</th><th>E-mail / Tel.</th><th>Roles</th><th>Convites</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
     <tbody>${list.map(x=>`
       <tr><td><b>${esc(x.name)}</b>${x.id===u.id?' <span class="cell-sub">(você)</span>':''}</td>
       <td>${esc(x.email||x.phone)}</td>
       <td><div class="chips">${roleChips(x.roles)}</div></td>
+      <td class="num">${x.inviteLimit==null?'<span class="cell-sub">ilimitado</span>':`${inviteUsage(x)} / ${x.inviteLimit}`}</td>
       <td><span class="badge ${STATUS_BADGE[x.status]}">${STATUS_LABEL[x.status]}</span></td>
       <td class="num">${fmtDate(x.createdAt)}</td>
       <td><div class="row-actions">
         ${can(u,'editRoles')&&x.id!==u.id?`<button class="btn btn-sm" onclick="openModal('roles','${x.id}')">Editar Roles</button>`:''}
+        ${can(u,'manageInviteLimits')&&x.id!==u.id?`<button class="btn btn-sm" onclick="openModal('limit','${x.id}')">Limite de Convites</button>`:''}
       </div></td></tr>`).join('')}
     </tbody></table></div>`;
 }
@@ -896,6 +924,22 @@ function modalHTML(){
       <button class="btn btn-dark" onclick="saveRoles('${target.id}',checkedRoles('ed'))">Salvar</button>
     </div>`;
   }
+  if(kind==='limit'){
+    const target = userById(data);
+    body = `
+    <h3>Limite de Convites — ${esc(target.name)}</h3>
+    <p style="font-size:13.5px;color:var(--ink-2);margin-bottom:12px">
+      Convites usados: <b class="num">${inviteUsage(target)}</b>.
+      Convites revogados ou expirados liberam a vaga. Deixe vazio para ilimitado.</p>
+    <div class="field"><label for="lim-val">Limite de convites</label>
+      <input id="lim-val" inputmode="numeric" placeholder="ilimitado"
+        value="${target.inviteLimit==null?'':target.inviteLimit}"></div>
+    ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveInviteLimit('${target.id}',document.getElementById('lim-val').value)">Salvar</button>
+    </div>`;
+  }
   if(kind==='promote'){
     const clients = DB.users.filter(x=>!x.roles.some(r=>r!=='correntista'&&r!=='somente_chat'));
     body = `
@@ -903,7 +947,7 @@ function modalHTML(){
     <div class="field"><label for="pr-user">Cliente</label>
       <select id="pr-user">${clients.map(c=>`<option value="${c.id}">${esc(c.name)} — ${esc(c.phone)}</option>`).join('')}</select></div>
     <div class="field"><label>Role a conceder</label>
-      <div class="checks">${['adm','finance_manager','withdrawal_operator','payment_operator'].map(r=>`
+      <div class="checks">${['adm','finance_manager','withdrawal_operator','payment_operator','chat_plus'].map(r=>`
         <label><input type="checkbox" data-rolebox="pr" value="${r}"> ${ROLES[r].label}</label>`).join('')}</div></div>
     ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
     <div class="foot">
@@ -1020,8 +1064,9 @@ function mobileAuth(){
         onclick="checkPhoneInvite(document.getElementById('rg-phone').value)">Verificar convite</button>
     </div>
     <p style="text-align:center;font-size:12px;color:var(--ink-3)">
-      Demo — Lucas: <span class="num">937259259</span>/admin123 ·
-      Pat: <span class="num">22988052238</span>/chat123<br>
+      Demo — Adm Super: <span class="num">11900000001</span>/super123 ·
+      Chat: <span class="num">11900000003</span>/chat123 ·
+      Chat Plus: <span class="num">11900000004</span>/plus123<br>
       Convite pendente: <span class="num">11999990000</span></p>`}
   </div></div>
   <div class="m-tabs"></div>`;
@@ -1142,10 +1187,19 @@ function mChat(u){
 
 function mInvites(u){
   const mine = DB.invites.filter(i=>i.createdBy===u.id).sort((a,b)=>b.createdAt-a.createdAt);
+  const limited = u.inviteLimit!=null;
+  const exhausted = limited && inviteUsage(u)>=u.inviteLimit;
   return `
   <div class="m-head"><h2>Convites</h2>
-    <button class="btn btn-blue btn-sm" onclick="openModal('invite')">＋ Convidar</button></div>
+    <button class="btn btn-blue btn-sm" ${exhausted?'disabled style="opacity:.45;cursor:not-allowed"':''}
+      onclick="${exhausted?'':"openModal('invite')"}">＋ Convidar</button></div>
   <div class="m-body"><div class="m-sec">
+    ${limited?`
+    <div class="m-card" style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13.5px;color:var(--ink-2)">Convites disponíveis</span>
+      <b class="num" style="color:${exhausted?'var(--bad)':'var(--ok)'}">${inviteUsage(u)} / ${u.inviteLimit}</b>
+    </div>
+    ${exhausted?`<div class="err" style="margin-top:0">Limite atingido. Peça ao Super Admin para aumentar seu limite de convites.</div>`:''}`:''}
     <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">
       Você pré-registra o telefone de quem quer convidar; só esse número conseguirá criar conta.</p>
     ${mine.length?mine.map(i=>`

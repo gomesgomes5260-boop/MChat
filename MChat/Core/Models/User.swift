@@ -29,6 +29,10 @@ struct User: Codable, Identifiable, Hashable {
     var invitedByUserID: UUID?
     var inviteID: UUID?
 
+    /// Limite de convites do usuário (nil = ilimitado). Definido pelo
+    /// super admin; convites revogados/expirados liberam a vaga.
+    var inviteLimit: Int? = nil
+
     /// Carteira multi-moeda (só relevante para quem tem `viewBalances`).
     var wallet: Wallet
 

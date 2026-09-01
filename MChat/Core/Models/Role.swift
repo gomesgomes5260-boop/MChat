@@ -31,6 +31,7 @@ enum Permission: String, Codable, CaseIterable, Hashable {
     case viewOwnInvites
     case viewAllInvites         // ver a árvore completa de convites
     case revokeInvites          // revogar convites de terceiros (super admin)
+    case manageInviteLimits     // definir o limite de convites de um usuário (super admin)
 
     // Comunicação
     case useChat
@@ -46,7 +47,8 @@ enum Role: String, Codable, CaseIterable, Identifiable, Hashable {
     case withdrawalOperator  = "withdrawal_operator"
     case paymentOperator     = "payment_operator"
     case accountHolder       = "correntista"   // cliente com conta financeira
-    case chatOnly            = "somente_chat"  // acesso só a chat/ligações
+    case chatPlus            = "chat_plus"     // chat/ligações + pode convidar usuários de chat
+    case chatOnly            = "somente_chat"  // acesso só a chat/ligações (não convida)
 
     var id: String { rawValue }
 
@@ -58,6 +60,7 @@ enum Role: String, Codable, CaseIterable, Identifiable, Hashable {
         case .withdrawalOperator: return "Operador de Saques"
         case .paymentOperator:    return "Operador de Pagamentos"
         case .accountHolder:      return "Correntista"
+        case .chatPlus:           return "Chat Plus"
         case .chatOnly:           return "Somente Chat"
         }
     }
@@ -94,8 +97,13 @@ enum Role: String, Codable, CaseIterable, Identifiable, Hashable {
             return [.viewBalances, .createInvites, .viewOwnInvites,
                     .useChat, .useVoiceCalls]
 
-        case .chatOnly:
+        case .chatPlus:
+            // Convida novos usuários de chat, sujeito ao inviteLimit do
+            // usuário (gerenciado pelo super admin).
             return [.createInvites, .viewOwnInvites, .useChat, .useVoiceCalls]
+
+        case .chatOnly:
+            return [.useChat, .useVoiceCalls]
         }
     }
 }

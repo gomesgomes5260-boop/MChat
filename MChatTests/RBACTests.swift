@@ -16,14 +16,31 @@ final class RBACTests: XCTestCase {
         }
     }
 
-    func testChatOnlyCannotSeeFinance() {
+    func testChatOnlyCannotSeeFinanceNorInvite() {
         let user = makeUser(roles: [.chatOnly])
         XCTAssertTrue(user.can(.useChat))
         XCTAssertTrue(user.can(.useVoiceCalls))
+        XCTAssertFalse(user.can(.createInvites), "Somente Chat não convida — só o Chat Plus")
         XCTAssertFalse(user.can(.viewBalances))
         XCTAssertFalse(user.can(.viewWithdrawals))
         XCTAssertFalse(user.can(.viewDashboard))
         XCTAssertFalse(user.can(.editRoles))
+    }
+
+    func testChatPlusCanInviteButNothingElse() {
+        let user = makeUser(roles: [.chatPlus])
+        XCTAssertTrue(user.can(.useChat))
+        XCTAssertTrue(user.can(.createInvites))
+        XCTAssertFalse(user.can(.viewBalances))
+        XCTAssertFalse(user.can(.manageInviteLimits), "Limites de convite são do Super Admin")
+    }
+
+    func testOnlySuperAdminManagesInviteLimits() {
+        XCTAssertTrue(makeUser(roles: [.superAdmin]).can(.manageInviteLimits))
+        for role in Role.allCases where role != .superAdmin {
+            XCTAssertFalse(makeUser(roles: [role]).can(.manageInviteLimits),
+                           "\(role) não deveria gerenciar limites")
+        }
     }
 
     func testWithdrawalOperatorScope() {

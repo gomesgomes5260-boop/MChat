@@ -5,16 +5,18 @@ enum ServiceError: LocalizedError {
     case notAuthorized
     case inviteInvalid
     case inviteAlreadyUsed
+    case inviteLimitReached
     case notFound
     case network(String)
 
     var errorDescription: String? {
         switch self {
-        case .notAuthorized:     return "Você não tem permissão para esta ação."
-        case .inviteInvalid:     return "Convite inválido ou expirado."
-        case .inviteAlreadyUsed: return "Este convite já foi utilizado."
-        case .notFound:          return "Registro não encontrado."
-        case .network(let m):    return m
+        case .notAuthorized:      return "Você não tem permissão para esta ação."
+        case .inviteInvalid:      return "Convite inválido ou expirado."
+        case .inviteAlreadyUsed:  return "Este convite já foi utilizado."
+        case .inviteLimitReached: return "Limite de convites atingido. Peça ao Super Admin para aumentar seu limite."
+        case .notFound:           return "Registro não encontrado."
+        case .network(let m):     return m
         }
     }
 }
@@ -33,6 +35,8 @@ protocol UserAdminServicing {
     func fetchAdminUsers() async throws -> [User]
     func updateRoles(userID: UUID, roles: Set<Role>, actingUser: User) async throws -> User
     func setStatus(userID: UUID, status: UserStatus, actingUser: User) async throws -> User
+    /// Define o limite de convites (nil = ilimitado). Requer `manageInviteLimits`.
+    func updateInviteLimit(userID: UUID, limit: Int?, actingUser: User) async throws -> User
 }
 
 protocol InviteServicing {

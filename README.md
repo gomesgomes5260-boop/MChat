@@ -18,9 +18,16 @@ base local (localStorage), sem backend:
 
 Como usar: abra o arquivo num servidor local (`python3 -m http.server` dentro
 de `prototype/`) e acesse em **duas abas** com usuários diferentes para testar
-chat/ligação. Usuários demo: `lucasgiovanny@gmail.com`/`admin123` (Super Admin),
-telefone `937259259`; `22988052238`/`chat123` (Somente Chat); convite pendente
-pré-registrado para o telefone `11999990000`.
+chat/ligação. Usuários demo (telefone / senha):
+
+| Usuário | Telefone | Senha | O que testa |
+|---|---|---|---|
+| Adm Super | `11900000001` (e-mail `super@mchat.app`) | `super123` | Todas as funções, inclusive limites de convite |
+| Operador | `11900000002` (e-mail `operador@mchat.app`) | `operador123` | Só saques e pagamentos no painel |
+| Chat | `11900000003` | `chat123` | Só chat/ligação; não convida |
+| Chat Plus | `11900000004` | `plus123` | Chat + convida usuários de chat até o limite |
+
+Convite pendente pré-registrado para cadastro: telefone `11999990000`.
 
 ## Como gerar o projeto Xcode
 
@@ -66,13 +73,14 @@ O controle de acesso é **baseado em permissões**, não em roles diretamente:
 
 | Role | Acesso |
 |---|---|
-| Super Admin | Tudo, incluindo revogar convites de terceiros e conceder Super Admin |
+| Super Admin | Tudo, incluindo revogar convites de terceiros, conceder Super Admin e gerenciar limites de convite |
 | ADM | Dashboard, clientes, usuários, visão de saques/pagamentos, árvore de convites |
 | Gestor Financeiro | Saldos e movimentação de ativos (BRL/USD/EUR/GBP) |
 | Operador de Saques | Aprovar/cancelar saques |
 | Operador de Pagamentos | Processar/cancelar pagamentos |
-| Correntista | Carteira própria, chat, ligações |
-| Somente Chat | Apenas chat e ligações |
+| Correntista | Carteira própria, chat, ligações, pode convidar usuários de chat |
+| Chat Plus | Chat e ligações + pode convidar usuários de chat, sujeito a um limite de convites definido pelo Super Admin |
+| Somente Chat | Apenas chat e ligações — **não** convida ninguém |
 
 As abas do app (`MainTabView`) aparecem/desaparecem conforme as permissões do
 usuário logado.
