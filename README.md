@@ -5,6 +5,23 @@ ativos financeiros multi-moeda (BRL, USD, EUR, GBP), saques, pagamentos,
 usuários com roles complexas, convites rastreáveis e chat/ligações de voz com
 criptografia ponta-a-ponta (protocolo Signal).
 
+## Protótipo HTML (testar antes do backend)
+
+`prototype/mchat-prototype.html` simula as duas faces do produto sobre a mesma
+base local (localStorage), sem backend:
+
+- **Painel Admin (web)** — Dashboard, Clientes, Saques, Pagamentos, Usuários e
+  Convites, com o mesmo RBAC do app.
+- **App Mobile** — cadastro **somente com convite pré-registrado no telefone**
+  (sem convite indexado ao número, o registro é negado), carteira multi-moeda,
+  chat e **ligação de voz real via WebRTC** entre duas abas do navegador.
+
+Como usar: abra o arquivo num servidor local (`python3 -m http.server` dentro
+de `prototype/`) e acesse em **duas abas** com usuários diferentes para testar
+chat/ligação. Usuários demo: `lucasgiovanny@gmail.com`/`admin123` (Super Admin),
+telefone `937259259`; `22988052238`/`chat123` (Somente Chat); convite pendente
+pré-registrado para o telefone `11999990000`.
+
 ## Como gerar o projeto Xcode
 
 O projeto usa [XcodeGen](https://github.com/yonaskolb/XcodeGen) — o `.xcodeproj`

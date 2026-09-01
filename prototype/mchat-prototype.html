@@ -1,0 +1,1218 @@
+<meta charset="utf-8">
+<title>MChat Protótipo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --ground:#F1F5F9; --card:#FFFFFF; --line:#E2E8F0;
+    --side:#0F1729; --side-ink:#CBD5E1;
+    --accent:#1D4ED8; --ok:#16A34A; --warn:#D97706; --bad:#DC2626; --info:#7C3AED;
+    --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:'Instrument Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:var(--ground);color:var(--ink);font:15px/1.5 var(--sans)}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);
+    border-radius:8px;padding:9px 12px;width:100%}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  h1,h2,h3{line-height:1.2;text-wrap:balance}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* ---------- botões ---------- */
+  .btn{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:8px 14px;
+    font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--card)}
+  .btn:hover{background:var(--ground)}
+  .btn-dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn-dark:hover{background:#1E293B}
+  .btn-blue{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn-blue:hover{background:#1E40AF}
+  .btn-red{color:var(--bad);border-color:#FCA5A5}
+  .btn-red:hover{background:#FEF2F2}
+  .btn-green{color:var(--ok);border-color:#86EFAC}
+  .btn-green:hover{background:#F0FDF4}
+  .btn-sm{padding:5px 10px;font-size:13px}
+
+  /* ---------- badges ---------- */
+  .badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+  .b-ok{background:#DCFCE7;color:#15803D}
+  .b-warn{background:#FEF3C7;color:#B45309}
+  .b-bad{background:#FEE2E2;color:#B91C1C}
+  .b-info{background:#EDE9FE;color:#6D28D9}
+  .b-gray{background:#F1F5F9;color:#475569}
+  .b-super{background:var(--ink);color:#fff}
+  .b-blue{background:#DBEAFE;color:#1D4ED8}
+
+  /* ---------- launcher ---------- */
+  .launch{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px}
+  .launch h1{font-size:34px;font-weight:700}
+  .launch h1 .tag{font-size:13px;background:var(--ink);color:#fff;border-radius:6px;padding:3px 8px;
+    vertical-align:middle;margin-left:10px;letter-spacing:.04em}
+  .launch p{color:var(--ink-2);max-width:52ch;text-align:center}
+  .launch-cards{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+  .launch-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;
+    width:290px;text-align:left;transition:box-shadow .15s,transform .15s}
+  .launch-card:hover{box-shadow:0 8px 30px rgba(15,23,42,.12);transform:translateY(-2px)}
+  .launch-card .ico{font-size:30px}
+  .launch-card h2{font-size:19px;margin:12px 0 6px}
+  .launch-card p{color:var(--ink-2);font-size:14px;text-align:left}
+  .hint{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;
+    padding:12px 16px;font-size:13.5px;max-width:640px}
+  .hint b{font-weight:700}
+
+  /* ---------- admin shell ---------- */
+  .admin{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  .side{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh}
+  .side .logo{color:#fff;font-size:20px;font-weight:700;padding:6px 10px 20px;display:flex;align-items:center;gap:8px}
+  .side .logo .tag{font-size:11px;background:#1E293B;border-radius:5px;padding:2px 7px;font-weight:600;letter-spacing:.05em}
+  .nav-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;
+    border-radius:8px;font-size:14.5px;font-weight:500;color:var(--side-ink)}
+  .nav-item:hover{background:#1E293B;color:#fff}
+  .nav-item.on{background:#1E293B;color:#fff}
+  .side .me{margin-top:auto;border-top:1px solid #1E293B;padding:14px 10px 4px;font-size:13px}
+  .side .me .nm{color:#fff;font-weight:600}
+  .side .me .em{color:#64748B;font-size:12px;word-break:break-all}
+  .main{padding:0}
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);padding:18px 28px;font-size:20px;font-weight:700}
+  .content{padding:24px 28px;display:flex;flex-direction:column;gap:18px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .stat .t{display:flex;justify-content:space-between;color:var(--ink-2);font-size:14px;font-weight:500}
+  .stat .v{font-size:32px;font-weight:700;margin:6px 0 2px}
+  .stat .s{color:var(--ink-3);font-size:12.5px}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .panel .head{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+    padding:12px 18px;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:13px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .empty{color:var(--ink-3);text-align:center;padding:34px 10px}
+  .tabs{display:inline-flex;background:#E8EDF3;border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
+  .tab{padding:6px 14px;border-radius:7px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+  .tab.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.1)}
+  .row-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .search-row{display:flex;gap:10px;max-width:520px}
+  .cell-sub{color:var(--ink-3);font-size:12.5px}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+
+  /* ---------- modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .modal{background:var(--card);border-radius:14px;width:min(440px,100%);max-height:88vh;overflow:auto;padding:22px}
+  .modal h3{font-size:17px;margin-bottom:14px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
+  .checks{display:flex;flex-direction:column;gap:7px}
+  .checks label{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:500;color:var(--ink)}
+  .checks input{width:auto}
+  .modal .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+  .err{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:8px;padding:9px 12px;font-size:13.5px;margin:10px 0}
+  .okbox{background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D;border-radius:8px;padding:9px 12px;font-size:13.5px;margin:10px 0}
+
+  /* ---------- login ---------- */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:30px;width:min(380px,100%)}
+  .login-box h2{margin-bottom:4px}
+  .login-box .sub{color:var(--ink-2);font-size:14px;margin-bottom:18px}
+
+  /* ---------- mobile ---------- */
+  .mob-stage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px;gap:26px;flex-wrap:wrap}
+  .phone{width:390px;height:800px;background:var(--card);border-radius:44px;border:10px solid #0B1220;
+    box-shadow:0 24px 70px rgba(15,23,42,.35);display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .phone .notch{height:26px;background:var(--card);display:flex;justify-content:center;align-items:center;flex:none}
+  .phone .notch i{width:110px;height:18px;background:#0B1220;border-radius:0 0 14px 14px}
+  .m-head{padding:10px 18px 12px;border-bottom:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .m-head h2{font-size:21px}
+  .m-body{flex:1;overflow-y:auto;background:var(--ground)}
+  .m-tabs{flex:none;display:flex;border-top:1px solid var(--line);background:var(--card);padding:6px 4px 14px}
+  .m-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--ink-3);padding:6px 2px;border-radius:8px}
+  .m-tab .ic{font-size:20px}
+  .m-tab.on{color:var(--accent)}
+  .m-sec{padding:16px}
+  .m-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+  .bal-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+  .bal-row:last-child{border-bottom:none}
+  .bal-row .cur{font-weight:600}
+  .bal-row .cur small{display:block;color:var(--ink-3);font-weight:500;font-size:12px}
+  .m-list-item{display:flex;align-items:center;gap:12px;background:var(--card);border-bottom:1px solid var(--line);padding:13px 16px;width:100%;text-align:left}
+  .m-list-item:active{background:var(--ground)}
+  .avatar{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+  .m-list-item .info{flex:1;min-width:0}
+  .m-list-item .nm{font-weight:600}
+  .m-list-item .pv{color:var(--ink-3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* chat */
+  .chat-body{display:flex;flex-direction:column;gap:6px;padding:14px}
+  .bubble{max-width:75%;padding:9px 13px;border-radius:16px;font-size:14.5px;word-break:break-word}
+  .bubble.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:5px}
+  .bubble.them{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .bubble time{display:block;font-size:10.5px;opacity:.7;margin-top:2px}
+  .chat-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card);flex:none}
+  .chat-input input{border-radius:999px}
+  .e2ee{color:var(--ink-3);font-size:11.5px;text-align:center;padding:8px 20px}
+
+  /* call overlay */
+  .call{position:absolute;inset:0;background:linear-gradient(180deg,#0B1220,#1E293B);color:#fff;z-index:30;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px}
+  .call .avatar{width:86px;height:86px;font-size:30px;background:#334155}
+  .call h3{font-size:23px}
+  .call .st{color:#94A3B8;font-size:14px}
+  .call .acts{display:flex;gap:26px;margin-top:26px}
+  .call-btn{width:62px;height:62px;border-radius:50%;font-size:26px;display:flex;align-items:center;justify-content:center;color:#fff}
+  .cb-red{background:var(--bad)}.cb-green{background:var(--ok)}
+  .pulse{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  @media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+
+  .back-link{position:fixed;top:14px;left:14px;z-index:60;background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(15,23,42,.12)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+    border-radius:10px;padding:10px 18px;font-size:14px;z-index:99;box-shadow:0 8px 24px rgba(15,23,42,.3)}
+  @media (max-width:900px){.admin{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}.side .me{display:none}}
+</style>
+
+<div id="app"></div>
+<audio id="remoteAudio" autoplay></audio>
+
+<script>
+'use strict';
+/* =====================================================================
+   MChat Protótipo — painel web + app mobile sobre a mesma base local.
+   Estado em localStorage (compartilhado entre abas); sincronização ao
+   vivo via BroadcastChannel; ligação de voz real via WebRTC entre abas.
+   ===================================================================== */
+
+/* ---------------- RBAC (espelha MChat/Core/Models/Role.swift) -------- */
+const PERMS = ['viewDashboard','viewClients','manageClients','viewBalances','manageAssets',
+  'viewWithdrawals','approveWithdrawals','viewPayments','processPayments',
+  'viewUsers','editRoles','promoteClient','createInvites','viewOwnInvites',
+  'viewAllInvites','revokeInvites','useChat','useVoiceCalls'];
+
+const ROLES = {
+  super_admin:{label:'Super Admin', perms:PERMS},
+  adm:{label:'ADM', perms:['viewDashboard','viewClients','manageClients','viewUsers','promoteClient',
+    'viewWithdrawals','viewPayments','createInvites','viewOwnInvites','viewAllInvites','useChat','useVoiceCalls']},
+  finance_manager:{label:'Gestor Financeiro', perms:['viewDashboard','viewBalances','manageAssets',
+    'viewWithdrawals','viewPayments','createInvites','viewOwnInvites','useChat','useVoiceCalls']},
+  withdrawal_operator:{label:'Operador de Saques', perms:['viewDashboard','viewWithdrawals','approveWithdrawals','viewOwnInvites','useChat']},
+  payment_operator:{label:'Operador de Pagamentos', perms:['viewDashboard','viewPayments','processPayments','viewOwnInvites','useChat']},
+  correntista:{label:'Correntista', perms:['viewBalances','createInvites','viewOwnInvites','useChat','useVoiceCalls']},
+  somente_chat:{label:'Somente Chat', perms:['createInvites','viewOwnInvites','useChat','useVoiceCalls']}
+};
+
+function userPerms(u){
+  const set = new Set();
+  (u.roles||[]).forEach(r => (ROLES[r]?.perms||[]).forEach(p => set.add(p)));
+  return set;
+}
+function can(u,p){ return !!u && u.status==='active' && userPerms(u).has(p); }
+function grantableRoles(u){
+  if((u.roles||[]).includes('super_admin')) return Object.keys(ROLES);
+  if((u.roles||[]).includes('adm')) return ['correntista','somente_chat','withdrawal_operator','payment_operator','finance_manager'];
+  return ['somente_chat'];
+}
+
+/* ---------------- utilidades ---------------- */
+const CURRENCIES = [
+  {code:'BRL',name:'Real',sym:'R$'},{code:'USD',name:'Dólar',sym:'$'},
+  {code:'EUR',name:'Euro',sym:'€'},{code:'GBP',name:'Libra',sym:'£'}];
+const uid = () => crypto.randomUUID();
+const normPhone = p => String(p||'').replace(/\D/g,'');
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmtMoney(cents,code){
+  return new Intl.NumberFormat('pt-BR',{style:'currency',currency:code}).format((cents||0)/100);
+}
+function parseMoney(str){
+  const clean = String(str||'').replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',','.');
+  const v = Math.round(parseFloat(clean)*100);
+  return Number.isFinite(v) && v>0 ? v : null;
+}
+function fmtDate(ts){ return new Date(ts).toLocaleDateString('pt-BR'); }
+function fmtTime(ts){ return new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+function inviteCode(){
+  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:8},()=>a[Math.floor(Math.random()*a.length)]).join('');
+}
+const STATUS_LABEL = {pending:'Pendente',active:'Ativo',suspended:'Suspenso'};
+const STATUS_BADGE = {pending:'b-warn',active:'b-ok',suspended:'b-bad'};
+const INV_LABEL = {pending:'Pendente',accepted:'Aceito',revoked:'Revogado',expired:'Expirado'};
+const INV_BADGE = {pending:'b-warn',accepted:'b-ok',revoked:'b-bad',expired:'b-gray'};
+const WD_LABEL = {pending:'Pendente',approved:'Aprovado',completed:'Concluído',cancelled:'Cancelado'};
+const WD_BADGE = {pending:'b-warn',approved:'b-blue',completed:'b-ok',cancelled:'b-bad'};
+const PAY_TYPES = {pix:'PIX',transfer:'Transferência',boleto:'Boleto',wire:'Wire Internacional'};
+
+/* ---------------- banco local + sync ---------------- */
+const DB_KEY = 'mchat_db_v1';
+const bc = new BroadcastChannel('mchat_sync');
+
+function seedDB(){
+  const lucasId = uid(), reviewId = uid(), opId = uid(), chatId = uid();
+  const now = Date.now(), day = 86400000;
+  const wallet = (brl=0,usd=0,eur=0,gbp=0)=>({BRL:brl,USD:usd,EUR:eur,GBP:gbp});
+  const invAceito = {id:uid(),code:inviteCode(),phone:'11988887777',createdBy:lucasId,
+    grantedRoles:['correntista'],status:'accepted',createdAt:now-30*day,expiresAt:now+day,
+    acceptedBy:reviewId,acceptedAt:now-29*day,revokedBy:null,revokedAt:null};
+  return {
+    users:[
+      {id:lucasId,name:'Lucas',phone:'937259259',email:'lucasgiovanny@gmail.com',pass:'admin123',
+       roles:['super_admin','correntista'],status:'active',createdAt:now-60*day,invitedBy:null,inviteId:null,
+       wallet:wallet(50000,120000,0,0)},
+      {id:reviewId,name:'App Review',phone:'11988887777',email:'appreview@finly.com.br',pass:'review123',
+       roles:['correntista','adm'],status:'active',createdAt:now-29*day,invitedBy:lucasId,inviteId:invAceito.id,
+       wallet:wallet(1250000,0,30000,0)},
+      {id:opId,name:'Rodrigo Operador',phone:'22999489728',email:'rodrigo@finly.com.br',pass:'op123',
+       roles:['withdrawal_operator','payment_operator'],status:'active',createdAt:now-20*day,invitedBy:lucasId,inviteId:null,
+       wallet:wallet()},
+      {id:chatId,name:'Pat Souza',phone:'22988052238',email:null,pass:'chat123',
+       roles:['somente_chat'],status:'active',createdAt:now-10*day,invitedBy:reviewId,inviteId:null,
+       wallet:wallet()}
+    ],
+    invites:[
+      invAceito,
+      {id:uid(),code:inviteCode(),phone:'11999990000',createdBy:lucasId,grantedRoles:['correntista'],
+       status:'pending',createdAt:now-day,expiresAt:now+6*day,acceptedBy:null,acceptedAt:null,revokedBy:null,revokedAt:null},
+      {id:uid(),code:inviteCode(),phone:'21988881234',createdBy:reviewId,grantedRoles:['somente_chat'],
+       status:'pending',createdAt:now-2*day,expiresAt:now+5*day,acceptedBy:null,acceptedAt:null,revokedBy:null,revokedAt:null}
+    ],
+    withdrawals:[
+      {id:uid(),clientId:reviewId,amount:20000,currency:'BRL',status:'pending',requestedAt:now-3600e3,decidedBy:null,decidedAt:null}
+    ],
+    payments:[
+      {id:uid(),clientId:reviewId,type:'pix',beneficiary:'Fornecedor XPTO Ltda',amount:55000,currency:'BRL',
+       status:'pending',requestedAt:now-7200e3,processedBy:null,processedAt:null}
+    ],
+    messages:[]
+  };
+}
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  const db = seedDB();
+  try{ localStorage.setItem(DB_KEY, JSON.stringify(db)); }catch(e){}
+  return db;
+}
+let DB = loadDB();
+function save(){
+  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+  bc.postMessage('sync');
+  render();
+}
+bc.onmessage = e => { if(e.data==='sync'){ DB = loadDB(); render(); } };
+window.addEventListener('storage', e => { if(e.key===DB_KEY){ DB = loadDB(); render(); } });
+
+const userById = id => DB.users.find(u=>u.id===id);
+const userName = id => userById(id)?.name || '—';
+function expireInvites(){
+  let dirty=false;
+  DB.invites.forEach(i=>{ if(i.status==='pending' && i.expiresAt<Date.now()){ i.status='expired'; dirty=true; } });
+  if(dirty) localStorage.setItem(DB_KEY, JSON.stringify(DB));
+}
+
+/* ---------------- sessão por aba + estado de UI ---------------- */
+const S = {
+  mode: sessionStorage.getItem('mchat_mode') || null,   // 'admin' | 'mobile'
+  uid:  sessionStorage.getItem('mchat_uid')  || null,
+  adminPage:'dashboard', clientFilter:'all', clientSearch:'',
+  wdFilter:'all', payFilter:'all', modal:null, modalErr:null, modalOk:null,
+  mobileScreen:'auth',   // auth | denied | main
+  mobileTab:'wallet', chatWith:null, regStep:1, regInvite:null, authErr:null,
+  detailClient:null
+};
+function me(){ return S.uid ? userById(S.uid) : null; }
+function setMode(m){ S.mode=m; sessionStorage.setItem('mchat_mode',m||''); render(); }
+function setUser(id){ S.uid=id; sessionStorage.setItem('mchat_uid',id||''); }
+function logout(){ endCall(); setUser(null); S.mobileScreen='auth'; S.regStep=1; S.authErr=null; render(); }
+function goHome(){ endCall(); setUser(null); S.mode=null; sessionStorage.removeItem('mchat_mode'); S.mobileScreen='auth'; render(); }
+function resetDB(){
+  if(!confirm('Recriar a base de demonstração? Todos os dados de teste serão perdidos.')) return;
+  localStorage.removeItem(DB_KEY); DB = loadDB(); bc.postMessage('sync'); logout();
+}
+function toast(msg){
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2600);
+}
+
+/* ---------------- ligação de voz (WebRTC entre abas) ---------------- */
+const rtc = new BroadcastChannel('mchat_rtc');
+let CALL = {state:'idle', peer:null, pc:null, stream:null, t0:null, timer:null, pendingOffer:null};
+
+async function makePC(){
+  const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+  pc.onicecandidate = ev => { if(ev.candidate) rtc.postMessage({type:'ice',from:S.uid,to:CALL.peer,cand:ev.candidate.toJSON()}); };
+  pc.ontrack = ev => { document.getElementById('remoteAudio').srcObject = ev.streams[0]; };
+  CALL.stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  CALL.stream.getTracks().forEach(t=>pc.addTrack(t,CALL.stream));
+  return pc;
+}
+async function startCall(toId){
+  if(CALL.state!=='idle') return;
+  try{
+    CALL.peer = toId; CALL.state='outgoing';
+    render();
+    CALL.pc = await makePC();
+    const offer = await CALL.pc.createOffer();
+    await CALL.pc.setLocalDescription(offer);
+    rtc.postMessage({type:'offer',from:S.uid,fromName:me()?.name,to:toId,sdp:offer});
+  }catch(e){
+    toast('Microfone indisponível: '+e.message); endCall();
+  }
+  render();
+}
+async function acceptCall(){
+  try{
+    CALL.pc = await makePC();
+    await CALL.pc.setRemoteDescription(CALL.pendingOffer);
+    const answer = await CALL.pc.createAnswer();
+    await CALL.pc.setLocalDescription(answer);
+    rtc.postMessage({type:'answer',from:S.uid,to:CALL.peer,sdp:answer});
+    CALL.state='active'; CALL.t0=Date.now(); tick();
+  }catch(e){ toast('Falha ao atender: '+e.message); endCall(); }
+  render();
+}
+function declineCall(){ rtc.postMessage({type:'hangup',from:S.uid,to:CALL.peer}); endCall(); }
+function endCall(){
+  if(CALL.state==='idle') return;
+  rtc.postMessage({type:'hangup',from:S.uid,to:CALL.peer});
+  cleanupCall();
+}
+function cleanupCall(){
+  CALL.pc?.close(); CALL.stream?.getTracks().forEach(t=>t.stop());
+  clearInterval(CALL.timer);
+  CALL = {state:'idle',peer:null,pc:null,stream:null,t0:null,timer:null,pendingOffer:null};
+  render();
+}
+function tick(){
+  clearInterval(CALL.timer);
+  CALL.timer = setInterval(()=>{
+    const el = document.getElementById('call-timer');
+    if(el && CALL.t0){
+      const s = Math.floor((Date.now()-CALL.t0)/1000);
+      el.textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    }
+  },1000);
+}
+rtc.onmessage = async e => {
+  const m = e.data;
+  if(m.to!==S.uid) return;
+  if(m.type==='offer'){
+    if(CALL.state!=='idle'){ rtc.postMessage({type:'hangup',from:S.uid,to:m.from}); return; }
+    CALL.peer=m.from; CALL.state='incoming'; CALL.pendingOffer=m.sdp; render();
+  }else if(m.type==='answer' && CALL.pc){
+    await CALL.pc.setRemoteDescription(m.sdp);
+    CALL.state='active'; CALL.t0=Date.now(); tick(); render();
+  }else if(m.type==='ice' && CALL.pc){
+    try{ await CALL.pc.addIceCandidate(m.cand); }catch(err){}
+  }else if(m.type==='hangup'){
+    cleanupCall();
+  }
+};
+
+/* ---------------- ações de domínio ---------------- */
+function loginAdmin(email,pass){
+  const u = DB.users.find(x=>x.email===email.trim());
+  if(!u || u.pass!==pass){ S.authErr='E-mail ou senha inválidos.'; render(); return; }
+  const adminPerms=['viewDashboard','viewClients','viewWithdrawals','viewPayments','viewUsers','viewAllInvites'];
+  if(u.status!=='active' || !adminPerms.some(p=>userPerms(u).has(p))){
+    S.authErr='Este usuário não tem acesso ao painel administrativo.'; render(); return;
+  }
+  S.authErr=null; setUser(u.id); S.adminPage='dashboard'; render();
+}
+function loginMobile(phone,pass){
+  const u = DB.users.find(x=>normPhone(x.phone)===normPhone(phone));
+  if(!u || u.pass!==pass){ S.authErr='Telefone ou senha inválidos.'; render(); return; }
+  S.authErr=null; setUser(u.id); S.mobileScreen='main';
+  S.mobileTab = can(u,'viewBalances') ? 'wallet' : 'chat';
+  render();
+}
+/* Cadastro: o telefone PRECISA ter convite pré-registrado; senão, negado. */
+function checkPhoneInvite(phone){
+  expireInvites();
+  const n = normPhone(phone);
+  if(!n){ S.authErr='Informe um telefone válido.'; render(); return; }
+  if(DB.users.some(u=>normPhone(u.phone)===n)){
+    S.authErr='Este número já possui conta. Use "Entrar".'; render(); return;
+  }
+  const inv = DB.invites.find(i=>normPhone(i.phone)===n && i.status==='pending' && i.expiresAt>Date.now());
+  if(!inv){ S.regInvite=null; S.mobileScreen='denied'; S.authErr=null; render(); return; }
+  S.regInvite={...inv, phoneTyped:phone}; S.regStep=2; S.authErr=null; render();
+}
+function registerMobile(name,pass){
+  const inv = DB.invites.find(i=>i.id===S.regInvite?.id);
+  if(!inv || inv.status!=='pending' || inv.expiresAt<Date.now()){
+    S.authErr='Este convite não está mais válido.'; S.regStep=1; render(); return;
+  }
+  if(!name.trim() || pass.length<4){ S.authErr='Preencha o nome e uma senha com 4+ caracteres.'; render(); return; }
+  const u = {id:uid(),name:name.trim(),phone:inv.phone,email:null,pass,
+    roles:[...inv.grantedRoles],status:'pending',createdAt:Date.now(),
+    invitedBy:inv.createdBy,inviteId:inv.id,wallet:{BRL:0,USD:0,EUR:0,GBP:0}};
+  inv.status='accepted'; inv.acceptedBy=u.id; inv.acceptedAt=Date.now();
+  DB.users.push(u); setUser(u.id); S.mobileScreen='main'; S.regStep=1; S.regInvite=null;
+  save(); toast('Conta criada — aguardando aprovação de um administrador.');
+}
+function createInvite(phone,roles){
+  const u = me();
+  if(!can(u,'createInvites')){ S.modalErr='Sem permissão para convidar.'; render(); return; }
+  const n = normPhone(phone);
+  if(n.length<8){ S.modalErr='Informe o telefone do convidado (com DDD).'; render(); return; }
+  if(DB.users.some(x=>normPhone(x.phone)===n)){ S.modalErr='Este número já possui conta.'; render(); return; }
+  if(DB.invites.some(i=>normPhone(i.phone)===n && i.status==='pending' && i.expiresAt>Date.now())){
+    S.modalErr='Já existe convite pendente para este número.'; render(); return;
+  }
+  const allowed = grantableRoles(u);
+  if(!roles.length || roles.some(r=>!allowed.includes(r))){
+    S.modalErr='Selecione ao menos uma role que você pode conceder.'; render(); return;
+  }
+  const inv = {id:uid(),code:inviteCode(),phone:n,createdBy:u.id,grantedRoles:roles,
+    status:'pending',createdAt:Date.now(),expiresAt:Date.now()+7*86400000,
+    acceptedBy:null,acceptedAt:null,revokedBy:null,revokedAt:null};
+  DB.invites.push(inv);
+  S.modalErr=null; S.modalOk=`Convite criado para ${n} — código ${inv.code}.`;
+  save();
+}
+function revokeInvite(id){
+  const u = me(), inv = DB.invites.find(i=>i.id===id);
+  if(!inv || inv.status!=='pending') return;
+  if(inv.createdBy!==u.id && !can(u,'revokeInvites')){ toast('Sem permissão para revogar este convite.'); return; }
+  inv.status='revoked'; inv.revokedBy=u.id; inv.revokedAt=Date.now();
+  save(); toast('Convite revogado.');
+}
+function setUserStatus(id,status){
+  if(!can(me(),'manageClients')){ toast('Sem permissão.'); return; }
+  const u = userById(id); if(!u) return;
+  u.status=status; save();
+  toast(status==='active'?'Conta ativada.':status==='suspended'?'Conta suspensa.':'Status atualizado.');
+}
+function saveRoles(id,roles){
+  const acting = me(), target = userById(id);
+  if(!can(acting,'editRoles')){ S.modalErr='Sem permissão para editar roles.'; render(); return; }
+  const wasSuper = target.roles.includes('super_admin'), willSuper = roles.includes('super_admin');
+  if(wasSuper!==willSuper && !acting.roles.includes('super_admin')){
+    S.modalErr='Só um Super Admin concede ou remove a role Super Admin.'; render(); return;
+  }
+  if(!roles.length){ S.modalErr='Selecione ao menos uma role.'; render(); return; }
+  target.roles=roles; S.modal=null; S.modalErr=null; save(); toast('Roles atualizadas.');
+}
+function requestWithdrawal(amountStr,currency){
+  const u = me(), cents = parseMoney(amountStr);
+  if(!cents){ S.modalErr='Informe um valor válido.'; render(); return; }
+  if((u.wallet[currency]||0) < cents){ S.modalErr='Saldo insuficiente em '+currency+'.'; render(); return; }
+  DB.withdrawals.push({id:uid(),clientId:u.id,amount:cents,currency,status:'pending',
+    requestedAt:Date.now(),decidedBy:null,decidedAt:null});
+  S.modal=null; S.modalErr=null; save(); toast('Saque solicitado — aguardando aprovação.');
+}
+function decideWithdrawal(id,approve){
+  const acting = me(), w = DB.withdrawals.find(x=>x.id===id);
+  if(!can(acting,'approveWithdrawals')){ toast('Sem permissão.'); return; }
+  if(!w || w.status!=='pending') return;
+  if(approve){
+    const c = userById(w.clientId);
+    if((c.wallet[w.currency]||0) < w.amount){ toast('Saldo do cliente insuficiente.'); return; }
+    c.wallet[w.currency]-=w.amount; w.status='approved';
+  }else w.status='cancelled';
+  w.decidedBy=acting.id; w.decidedAt=Date.now(); save();
+}
+function completeWithdrawal(id){
+  const w = DB.withdrawals.find(x=>x.id===id);
+  if(!can(me(),'approveWithdrawals') || !w || w.status!=='approved') return;
+  w.status='completed'; save();
+}
+function requestPayment(type,beneficiary,amountStr,currency){
+  const u = me(), cents = parseMoney(amountStr);
+  if(!cents){ S.modalErr='Informe um valor válido.'; render(); return; }
+  if(!beneficiary.trim()){ S.modalErr='Informe o beneficiário.'; render(); return; }
+  if((u.wallet[currency]||0) < cents){ S.modalErr='Saldo insuficiente em '+currency+'.'; render(); return; }
+  DB.payments.push({id:uid(),clientId:u.id,type,beneficiary:beneficiary.trim(),amount:cents,currency,
+    status:'pending',requestedAt:Date.now(),processedBy:null,processedAt:null});
+  S.modal=null; S.modalErr=null; save(); toast('Pagamento enviado para processamento.');
+}
+function processPayment(id,complete){
+  const acting = me(), p = DB.payments.find(x=>x.id===id);
+  if(!can(acting,'processPayments')){ toast('Sem permissão.'); return; }
+  if(!p || p.status!=='pending') return;
+  if(complete){
+    const c = userById(p.clientId);
+    if((c.wallet[p.currency]||0) < p.amount){ toast('Saldo do cliente insuficiente.'); return; }
+    c.wallet[p.currency]-=p.amount; p.status='completed';
+  }else p.status='cancelled';
+  p.processedBy=acting.id; p.processedAt=Date.now(); save();
+}
+function sendMsg(toId,text){
+  if(!text.trim()) return;
+  DB.messages.push({id:uid(),from:S.uid,to:toId,text:text.trim(),at:Date.now()});
+  save();
+}
+
+/* ---------------- helpers de UI ---------------- */
+function roleChips(roles){
+  return (roles||[]).map(r=>{
+    const cls = r==='super_admin' ? 'b-super' : r==='adm' ? 'b-ok' : r==='correntista' ? 'b-blue' : 'b-gray';
+    return `<span class="badge ${cls}">${esc(ROLES[r]?.label||r)}</span>`;
+  }).join(' ');
+}
+function openModal(kind,data){ S.modal={kind,data}; S.modalErr=null; S.modalOk=null; render(); }
+function closeModal(){ S.modal=null; S.modalErr=null; S.modalOk=null; render(); }
+function checkedRoles(prefix){
+  return [...document.querySelectorAll(`input[data-rolebox="${prefix}"]:checked`)].map(el=>el.value);
+}
+
+/* ================= RENDER ================= */
+function render(){
+  preserveFocus(()=> {
+    const app = document.getElementById('app');
+    if(!S.mode){ app.innerHTML = viewLauncher(); return; }
+    if(S.mode==='admin') app.innerHTML = viewAdmin();
+    else app.innerHTML = viewMobile();
+  });
+}
+let focusMemo=null;
+function preserveFocus(fn){
+  const el = document.activeElement;
+  if(el && (el.tagName==='INPUT'||el.tagName==='SELECT') && el.id)
+    focusMemo={id:el.id,val:el.value,pos:el.selectionStart};
+  fn();
+  if(focusMemo){
+    const el2 = document.getElementById(focusMemo.id);
+    if(el2){ el2.value=focusMemo.val; el2.focus(); try{el2.setSelectionRange(focusMemo.pos,focusMemo.pos);}catch(e){} }
+    focusMemo=null;
+  }
+}
+
+/* ---------------- launcher ---------------- */
+function viewLauncher(){
+  return `
+  <div class="launch">
+    <h1>MChat<span class="tag">PROTÓTIPO</span></h1>
+    <p>Painel web e app mobile operando sobre a mesma base local, para testar
+       convites por telefone, roles, saques, pagamentos, chat e ligações antes do backend.</p>
+    <div class="launch-cards">
+      <button class="launch-card" onclick="setMode('admin')">
+        <div class="ico">🖥️</div>
+        <h2>Painel Admin (web)</h2>
+        <p>Dashboard, clientes, saques, pagamentos, usuários e convites — como no painel Vezoa.</p>
+      </button>
+      <button class="launch-card" onclick="setMode('mobile')">
+        <div class="ico">📱</div>
+        <h2>App Mobile (iOS)</h2>
+        <p>Cadastro por convite indexado ao telefone, carteira, chat e ligação de voz.</p>
+      </button>
+    </div>
+    <div class="hint">
+      <b>Para testar chat e ligação:</b> abra esta página em <b>duas abas</b>, entre com usuários
+      diferentes (ex.: Lucas <span class="num">937259259</span>/admin123 e Pat
+      <span class="num">22988052238</span>/chat123) e converse ou ligue entre elas.
+      Telefone com convite pré-registrado para testar cadastro: <b class="num">11999990000</b>.
+    </div>
+    <button class="btn btn-sm" onclick="resetDB()">↺ Recriar base de demonstração</button>
+  </div>`;
+}
+
+/* ---------------- ADMIN ---------------- */
+function viewAdmin(){
+  const u = me();
+  if(!u) return viewAdminLogin();
+  const nav = [
+    ['dashboard','Dashboard','▦','viewDashboard'],
+    ['clients','Clientes','👥','viewClients'],
+    ['withdrawals','Saques','⬇','viewWithdrawals'],
+    ['payments','Pagamentos','▤','viewPayments'],
+    ['users','Usuários','🛡','viewUsers'],
+    ['invites','Convites','✈','viewAllInvites']
+  ].filter(([,, ,p])=>can(u,p));
+  if(!nav.some(([k])=>k===S.adminPage)) S.adminPage = nav[0]?.[0] || 'dashboard';
+  const pages = {dashboard:pageDashboard,clients:pageClients,withdrawals:pageWithdrawals,
+    payments:pagePayments,users:pageUsers,invites:pageInvitesAdmin};
+  const titles = {dashboard:'Dashboard',clients:'Clientes',withdrawals:'Saques',
+    payments:'Pagamentos',users:'Usuários',invites:'Convites'};
+  return `
+  <button class="back-link" onclick="goHome()">← Início</button>
+  <div class="admin">
+    <aside class="side">
+      <div class="logo">MChat <span class="tag">Admin</span></div>
+      ${nav.map(([k,l,i])=>`
+        <button class="nav-item ${S.adminPage===k?'on':''}" onclick="S.adminPage='${k}';S.detailClient=null;render()">
+          <span>${i}</span> ${l}</button>`).join('')}
+      <div class="me">
+        <div class="nm">${esc(u.name)}</div>
+        <div class="em">${esc(u.email||u.phone)}</div>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="logout()">⎋ Sair</button>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">${titles[S.adminPage]}</div>
+      <div class="content">${(pages[S.adminPage]||pageDashboard)(u)}</div>
+    </div>
+  </div>
+  ${modalHTML()}`;
+}
+function viewAdminLogin(){
+  return `
+  <button class="back-link" onclick="goHome()">← Início</button>
+  <div class="login-wrap"><div class="login-box">
+    <h2>MChat <span class="badge b-super">Admin</span></h2>
+    <div class="sub">Acesso restrito a usuários com permissões administrativas.</div>
+    <div class="field"><label for="ad-email">E-mail</label>
+      <input id="ad-email" type="email" placeholder="voce@exemplo.com"></div>
+    <div class="field"><label for="ad-pass">Senha</label>
+      <input id="ad-pass" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')loginAdmin(document.getElementById('ad-email').value,this.value)"></div>
+    ${S.authErr?`<div class="err">${esc(S.authErr)}</div>`:''}
+    <button class="btn btn-dark" style="width:100%;justify-content:center"
+      onclick="loginAdmin(document.getElementById('ad-email').value,document.getElementById('ad-pass').value)">Entrar</button>
+    <p style="margin-top:14px;font-size:12.5px;color:var(--ink-3)">
+      Demo: lucasgiovanny@gmail.com / admin123 · rodrigo@finly.com.br / op123</p>
+  </div></div>`;
+}
+
+function pageDashboard(){
+  const us = DB.users;
+  const stats = [
+    ['Total de Clientes',us.length,'Clientes cadastrados','👥'],
+    ['Clientes Ativos',us.filter(x=>x.status==='active').length,'Com conta ativa','✅'],
+    ['Saques Pendentes',DB.withdrawals.filter(w=>w.status==='pending').length,'Aguardando aprovação','⬇'],
+    ['Pagamentos Pendentes',DB.payments.filter(p=>p.status==='pending').length,'Aguardando processamento','▤'],
+    ['Aguardando Aprovação Manual',us.filter(x=>x.status==='pending').length,'Clientes com aprovação pendente','🕐'],
+    ['Clientes Suspensos',us.filter(x=>x.status==='suspended').length,'Contas suspensas','🚫']
+  ];
+  const quick = [
+    ['Saques para aprovar',DB.withdrawals.filter(w=>w.status==='pending').length,'withdrawals'],
+    ['Pagamentos para processar',DB.payments.filter(p=>p.status==='pending').length,'payments'],
+    ['Clientes para aprovar',us.filter(x=>x.status==='pending').length,'clients']
+  ];
+  return `
+  <div class="cards">${stats.map(([t,v,s,i])=>`
+    <div class="stat"><div class="t">${t}<span>${i}</span></div>
+    <div class="v num">${v}</div><div class="s">${s}</div></div>`).join('')}
+  </div>
+  <div class="panel" style="max-width:520px">
+    <div class="head">📈 Ações Rápidas</div>
+    ${quick.map(([t,v,pg])=>`
+      <button class="m-list-item" onclick="S.adminPage='${pg}';render()" style="border-radius:0">
+        <div class="info"><div class="nm" style="font-weight:500">${t}</div></div>
+        <span class="badge ${v>0?'b-warn':'b-gray'} num">${v}</span>
+      </button>`).join('')}
+  </div>`;
+}
+
+function pageClients(u){
+  const tabs = [['all','Todos'],['pending','Pendentes'],['active','Ativos'],['suspended','Suspensos']];
+  const q = S.clientSearch.toLowerCase();
+  const list = DB.users
+    .filter(c=>S.clientFilter==='all'||c.status===S.clientFilter)
+    .filter(c=>!q||c.name.toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)||normPhone(c.phone).includes(normPhone(q)))
+    .sort((a,b)=>b.createdAt-a.createdAt);
+  if(S.detailClient){
+    const c = userById(S.detailClient);
+    if(c) return clientDetail(u,c);
+    S.detailClient=null;
+  }
+  return `
+  <div class="search-row">
+    <input id="cli-search" placeholder="Buscar por nome, e-mail ou telefone…" value="${esc(S.clientSearch)}"
+      oninput="S.clientSearch=this.value;render()">
+  </div>
+  <div class="tabs">${tabs.map(([k,l])=>`
+    <button class="tab ${S.clientFilter===k?'on':''}" onclick="S.clientFilter='${k}';render()">${l}</button>`).join('')}
+  </div>
+  <div class="panel"><table>
+    <thead><tr><th>Nome</th><th>E-mail</th><th>Status / Roles</th><th>Saldo BRL</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
+    <tbody>
+    ${list.length?list.map(c=>`
+      <tr>
+        <td><b>${esc(c.name)}</b><div class="cell-sub num">${esc(c.phone)}</div></td>
+        <td>${esc(c.email||'—')}</td>
+        <td><span class="badge ${STATUS_BADGE[c.status]}">${STATUS_LABEL[c.status]}</span>
+            <div class="chips">${roleChips(c.roles)}</div></td>
+        <td class="num">${fmtMoney(c.wallet.BRL,'BRL')}</td>
+        <td class="num">${fmtDate(c.createdAt)}</td>
+        <td><div class="row-actions">
+          <button class="btn btn-sm" onclick="S.detailClient='${c.id}';render()">👁 Ver</button>
+          ${can(u,'manageClients')&&c.status==='pending'?`<button class="btn btn-sm btn-green" onclick="setUserStatus('${c.id}','active')">Aprovar</button>`:''}
+          ${can(u,'manageClients')&&c.status==='active'&&c.id!==u.id?`<button class="btn btn-sm btn-red" onclick="setUserStatus('${c.id}','suspended')">Suspender</button>`:''}
+          ${can(u,'manageClients')&&c.status==='suspended'?`<button class="btn btn-sm btn-green" onclick="setUserStatus('${c.id}','active')">Reativar</button>`:''}
+        </div></td>
+      </tr>`).join(''):`<tr><td colspan="6" class="empty">Nenhum cliente encontrado.</td></tr>`}
+    </tbody></table></div>`;
+}
+function clientDetail(u,c){
+  const inviter = c.invitedBy ? userById(c.invitedBy) : null;
+  const invitees = DB.users.filter(x=>x.invitedBy===c.id);
+  return `
+  <button class="btn btn-sm" onclick="S.detailClient=null;render()">← Voltar para a lista</button>
+  <div class="panel"><div class="head">${esc(c.name)}
+    <span class="badge ${STATUS_BADGE[c.status]}">${STATUS_LABEL[c.status]}</span></div>
+    <table><tbody>
+      <tr><td style="width:200px;color:var(--ink-2)">Telefone</td><td class="num">${esc(c.phone)}</td></tr>
+      <tr><td style="color:var(--ink-2)">E-mail</td><td>${esc(c.email||'—')}</td></tr>
+      <tr><td style="color:var(--ink-2)">Roles</td><td><div class="chips">${roleChips(c.roles)}</div></td></tr>
+      <tr><td style="color:var(--ink-2)">Convidado por</td>
+        <td>${inviter?esc(inviter.name):'<span class="badge b-super">Usuário raiz</span>'}</td></tr>
+      <tr><td style="color:var(--ink-2)">Convidou</td>
+        <td>${invitees.length?invitees.map(x=>esc(x.name)).join(', '):'—'}</td></tr>
+      ${CURRENCIES.map(cur=>`
+        <tr><td style="color:var(--ink-2)">Saldo ${cur.name} (${cur.code})</td>
+        <td class="num">${fmtMoney(c.wallet[cur.code],cur.code)}</td></tr>`).join('')}
+    </tbody></table>
+  </div>`;
+}
+
+function pageWithdrawals(u){
+  const tabs=[['all','Todos'],['pending','Pendentes'],['approved','Aprovados'],['completed','Concluídos'],['cancelled','Cancelados']];
+  const list = DB.withdrawals.filter(w=>S.wdFilter==='all'||w.status===S.wdFilter).sort((a,b)=>b.requestedAt-a.requestedAt);
+  return `
+  <div class="tabs">${tabs.map(([k,l])=>`
+    <button class="tab ${S.wdFilter===k?'on':''}" onclick="S.wdFilter='${k}';render()">${l}</button>`).join('')}</div>
+  <div class="panel"><table>
+    <thead><tr><th>Cliente</th><th>Moeda</th><th>Valor</th><th>Status</th><th>Data</th><th style="text-align:right">Ações</th></tr></thead>
+    <tbody>${list.length?list.map(w=>`
+      <tr><td><b>${esc(userName(w.clientId))}</b></td>
+      <td>${w.currency}</td><td class="num">${fmtMoney(w.amount,w.currency)}</td>
+      <td><span class="badge ${WD_BADGE[w.status]}">${WD_LABEL[w.status]}</span>
+        ${w.decidedBy?`<div class="cell-sub">por ${esc(userName(w.decidedBy))}</div>`:''}</td>
+      <td class="num">${fmtDate(w.requestedAt)} ${fmtTime(w.requestedAt)}</td>
+      <td><div class="row-actions">
+        ${can(u,'approveWithdrawals')&&w.status==='pending'?`
+          <button class="btn btn-sm btn-green" onclick="decideWithdrawal('${w.id}',true)">Aprovar</button>
+          <button class="btn btn-sm btn-red" onclick="decideWithdrawal('${w.id}',false)">Cancelar</button>`:''}
+        ${can(u,'approveWithdrawals')&&w.status==='approved'?`
+          <button class="btn btn-sm btn-blue" onclick="completeWithdrawal('${w.id}')">Concluir</button>`:''}
+      </div></td></tr>`).join(''):`<tr><td colspan="6" class="empty">Nenhum saque encontrado.</td></tr>`}
+    </tbody></table></div>`;
+}
+
+function pagePayments(u){
+  const tabs=[['all','Todos'],['pending','Pendentes'],['completed','Concluídos'],['cancelled','Cancelados']];
+  const list = DB.payments.filter(p=>S.payFilter==='all'||p.status===S.payFilter).sort((a,b)=>b.requestedAt-a.requestedAt);
+  return `
+  <div class="tabs">${tabs.map(([k,l])=>`
+    <button class="tab ${S.payFilter===k?'on':''}" onclick="S.payFilter='${k}';render()">${l}</button>`).join('')}</div>
+  <div class="panel"><table>
+    <thead><tr><th>Cliente</th><th>Tipo</th><th>Beneficiário</th><th>Valor</th><th>Status</th><th>Data</th><th style="text-align:right">Ações</th></tr></thead>
+    <tbody>${list.length?list.map(p=>`
+      <tr><td><b>${esc(userName(p.clientId))}</b></td>
+      <td>${PAY_TYPES[p.type]||p.type}</td><td>${esc(p.beneficiary)}</td>
+      <td class="num">${fmtMoney(p.amount,p.currency)}</td>
+      <td><span class="badge ${WD_BADGE[p.status]}">${WD_LABEL[p.status]}</span>
+        ${p.processedBy?`<div class="cell-sub">por ${esc(userName(p.processedBy))}</div>`:''}</td>
+      <td class="num">${fmtDate(p.requestedAt)} ${fmtTime(p.requestedAt)}</td>
+      <td><div class="row-actions">
+        ${can(u,'processPayments')&&p.status==='pending'?`
+          <button class="btn btn-sm btn-green" onclick="processPayment('${p.id}',true)">Processar</button>
+          <button class="btn btn-sm btn-red" onclick="processPayment('${p.id}',false)">Cancelar</button>`:''}
+      </div></td></tr>`).join(''):`<tr><td colspan="7" class="empty">Nenhum pagamento encontrado.</td></tr>`}
+    </tbody></table></div>`;
+}
+
+function pageUsers(u){
+  const adminRoles=['super_admin','adm','finance_manager','withdrawal_operator','payment_operator'];
+  const list = DB.users.filter(x=>x.roles.some(r=>adminRoles.includes(r)));
+  return `
+  <div class="panel">
+    <div class="head">Usuários com funções administrativas
+      ${can(u,'promoteClient')?`<button class="btn btn-dark btn-sm" onclick="openModal('promote')">➕ Promover Cliente</button>`:''}
+    </div>
+    <table>
+    <thead><tr><th>Nome</th><th>E-mail</th><th>Roles</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
+    <tbody>${list.map(x=>`
+      <tr><td><b>${esc(x.name)}</b>${x.id===u.id?' <span class="cell-sub">(você)</span>':''}</td>
+      <td>${esc(x.email||x.phone)}</td>
+      <td><div class="chips">${roleChips(x.roles)}</div></td>
+      <td><span class="badge ${STATUS_BADGE[x.status]}">${STATUS_LABEL[x.status]}</span></td>
+      <td class="num">${fmtDate(x.createdAt)}</td>
+      <td><div class="row-actions">
+        ${can(u,'editRoles')&&x.id!==u.id?`<button class="btn btn-sm" onclick="openModal('roles','${x.id}')">Editar Roles</button>`:''}
+      </div></td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function pageInvitesAdmin(u){
+  const list = [...DB.invites].sort((a,b)=>b.createdAt-a.createdAt);
+  return `
+  <div class="panel">
+    <div class="head">Convites — pré-registro por telefone
+      <button class="btn btn-dark btn-sm" onclick="openModal('invite')">✈ Novo Convite</button>
+    </div>
+    <table>
+    <thead><tr><th>Telefone</th><th>Código</th><th>Convidado por</th><th>Roles no aceite</th><th>Status</th><th>Expira</th><th style="text-align:right">Ações</th></tr></thead>
+    <tbody>${list.length?list.map(i=>`
+      <tr><td class="num"><b>${esc(i.phone)}</b></td>
+      <td class="num">${i.code}</td>
+      <td>${esc(userName(i.createdBy))}
+        ${i.acceptedBy?`<div class="cell-sub">aceito por ${esc(userName(i.acceptedBy))}</div>`:''}
+        ${i.revokedBy?`<div class="cell-sub">revogado por ${esc(userName(i.revokedBy))}</div>`:''}</td>
+      <td><div class="chips">${roleChips(i.grantedRoles)}</div></td>
+      <td><span class="badge ${INV_BADGE[i.status]}">${INV_LABEL[i.status]}</span></td>
+      <td class="num">${fmtDate(i.expiresAt)}</td>
+      <td><div class="row-actions">
+        ${i.status==='pending'&&(i.createdBy===u.id||can(u,'revokeInvites'))?`
+          <button class="btn btn-sm btn-red" onclick="revokeInvite('${i.id}')">Revogar</button>`:''}
+      </div></td></tr>`).join(''):`<tr><td colspan="7" class="empty">Nenhum convite.</td></tr>`}
+    </tbody></table></div>`;
+}
+
+/* ---------------- modais ---------------- */
+function modalHTML(){
+  if(!S.modal) return '';
+  const u = me(); const {kind,data} = S.modal;
+  let body='';
+  if(kind==='invite'){
+    const allowed = grantableRoles(u);
+    body = `
+    <h3>Novo Convite</h3>
+    <p style="font-size:13.5px;color:var(--ink-2);margin-bottom:12px">
+      O número informado fica pré-registrado: só ele conseguirá se cadastrar no app.</p>
+    <div class="field"><label for="inv-phone">Telefone do convidado (com DDD)</label>
+      <input id="inv-phone" inputmode="tel" placeholder="11 91234-5678"></div>
+    <div class="field"><label>Roles concedidas ao aceitar</label>
+      <div class="checks">${Object.keys(ROLES).filter(r=>allowed.includes(r)).map(r=>`
+        <label><input type="checkbox" data-rolebox="inv" value="${r}" ${r==='somente_chat'?'checked':''}> ${ROLES[r].label}</label>`).join('')}
+      </div></div>
+    ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
+    ${S.modalOk?`<div class="okbox">${esc(S.modalOk)}</div>`:''}
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Fechar</button>
+      <button class="btn btn-dark" onclick="createInvite(document.getElementById('inv-phone').value,checkedRoles('inv'))">Gerar convite</button>
+    </div>`;
+  }
+  if(kind==='roles'){
+    const target = userById(data);
+    const isSuper = u.roles.includes('super_admin');
+    body = `
+    <h3>Editar Roles — ${esc(target.name)}</h3>
+    <div class="checks">${Object.keys(ROLES).map(r=>`
+      <label><input type="checkbox" data-rolebox="ed" value="${r}"
+        ${target.roles.includes(r)?'checked':''} ${r==='super_admin'&&!isSuper?'disabled':''}>
+        ${ROLES[r].label}${r==='super_admin'&&!isSuper?' <span class="cell-sub">(só Super Admin)</span>':''}</label>`).join('')}
+    </div>
+    ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveRoles('${target.id}',checkedRoles('ed'))">Salvar</button>
+    </div>`;
+  }
+  if(kind==='promote'){
+    const clients = DB.users.filter(x=>!x.roles.some(r=>r!=='correntista'&&r!=='somente_chat'));
+    body = `
+    <h3>Promover Cliente</h3>
+    <div class="field"><label for="pr-user">Cliente</label>
+      <select id="pr-user">${clients.map(c=>`<option value="${c.id}">${esc(c.name)} — ${esc(c.phone)}</option>`).join('')}</select></div>
+    <div class="field"><label>Role a conceder</label>
+      <div class="checks">${['adm','finance_manager','withdrawal_operator','payment_operator'].map(r=>`
+        <label><input type="checkbox" data-rolebox="pr" value="${r}"> ${ROLES[r].label}</label>`).join('')}</div></div>
+    ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" onclick="(function(){
+        const id=document.getElementById('pr-user').value, roles=checkedRoles('pr');
+        if(!id||!roles.length){S.modalErr='Selecione o cliente e ao menos uma role.';render();return;}
+        saveRoles(id,[...new Set([...userById(id).roles,...roles])]);
+      })()">Promover</button>
+    </div>`;
+  }
+  if(kind==='withdraw'){
+    body = `
+    <h3>Solicitar Saque</h3>
+    <div class="field"><label for="wd-cur">Moeda</label>
+      <select id="wd-cur">${CURRENCIES.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('')}</select></div>
+    <div class="field"><label for="wd-val">Valor</label>
+      <input id="wd-val" inputmode="decimal" placeholder="0,00"></div>
+    ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-blue" onclick="requestWithdrawal(document.getElementById('wd-val').value,document.getElementById('wd-cur').value)">Solicitar</button>
+    </div>`;
+  }
+  if(kind==='pay'){
+    body = `
+    <h3>Novo Pagamento</h3>
+    <div class="field"><label for="py-type">Tipo</label>
+      <select id="py-type">${Object.entries(PAY_TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+    <div class="field"><label for="py-ben">Beneficiário</label>
+      <input id="py-ben" placeholder="Nome ou chave do beneficiário"></div>
+    <div class="field"><label for="py-cur">Moeda</label>
+      <select id="py-cur">${CURRENCIES.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('')}</select></div>
+    <div class="field"><label for="py-val">Valor</label>
+      <input id="py-val" inputmode="decimal" placeholder="0,00"></div>
+    ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-blue" onclick="requestPayment(document.getElementById('py-type').value,document.getElementById('py-ben').value,document.getElementById('py-val').value,document.getElementById('py-cur').value)">Enviar</button>
+    </div>`;
+  }
+  return `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${body}</div></div>`;
+}
+
+/* ---------------- MOBILE ---------------- */
+function viewMobile(){
+  const u = me();
+  let screen;
+  if(CALL.state!=='idle') screen = mobileMain(u); // call overlay renders inside
+  else if(!u || S.mobileScreen==='auth' || S.mobileScreen==='denied') screen = mobileAuth();
+  else screen = mobileMain(u);
+  return `
+  <button class="back-link" onclick="goHome()">← Início</button>
+  <div class="mob-stage"><div class="phone">
+    <div class="notch"><i></i></div>
+    ${screen}
+    ${callOverlay()}
+  </div></div>`;
+}
+
+function mobileAuth(){
+  if(S.mobileScreen==='denied'){
+    return `
+    <div class="m-body"><div class="m-sec" style="padding-top:70px;text-align:center">
+      <div style="font-size:52px">🚫</div>
+      <h2 style="margin:14px 0 8px">Cadastro negado</h2>
+      <p style="color:var(--ink-2);font-size:14.5px;max-width:30ch;margin:0 auto">
+        Este número não possui um convite pré-registrado. O MChat é acessível
+        apenas por convite de quem já usa o app.</p>
+      <button class="btn btn-dark" style="margin-top:22px" onclick="S.mobileScreen='auth';S.regStep=1;render()">← Voltar</button>
+    </div></div>
+    <div class="m-tabs"></div>`;
+  }
+  const reg2 = S.regStep===2 && S.regInvite;
+  return `
+  <div class="m-body"><div class="m-sec" style="padding-top:44px">
+    <div style="text-align:center;margin-bottom:26px">
+      <div style="font-size:44px">💬</div>
+      <h2 style="font-size:26px">MChat</h2>
+      <p style="color:var(--ink-3);font-size:13.5px">Mensagens e finanças, só por convite.</p>
+    </div>
+    ${reg2 ? `
+    <div class="m-card">
+      <div class="okbox" style="margin-top:0">✓ Convite encontrado para
+        <b class="num">${esc(S.regInvite.phone)}</b></div>
+      <p style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Você entrará como:
+        <span class="chips">${roleChips(S.regInvite.grantedRoles)}</span></p>
+      <div class="field"><label for="rg-name">Seu nome</label><input id="rg-name" placeholder="Nome completo"></div>
+      <div class="field"><label for="rg-pass">Senha</label><input id="rg-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
+      ${S.authErr?`<div class="err">${esc(S.authErr)}</div>`:''}
+      <button class="btn btn-blue" style="width:100%;justify-content:center"
+        onclick="registerMobile(document.getElementById('rg-name').value,document.getElementById('rg-pass').value)">Criar conta</button>
+      <button class="btn btn-sm" style="width:100%;justify-content:center;margin-top:8px"
+        onclick="S.regStep=1;S.regInvite=null;render()">Cancelar</button>
+    </div>` : `
+    <div class="m-card">
+      <h3 style="font-size:15px;margin-bottom:10px">Entrar</h3>
+      <div class="field"><label for="lg-phone">Telefone</label>
+        <input id="lg-phone" inputmode="tel" placeholder="Número com DDD"></div>
+      <div class="field"><label for="lg-pass">Senha</label>
+        <input id="lg-pass" type="password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter')loginMobile(document.getElementById('lg-phone').value,this.value)"></div>
+      ${S.authErr?`<div class="err">${esc(S.authErr)}</div>`:''}
+      <button class="btn btn-blue" style="width:100%;justify-content:center"
+        onclick="loginMobile(document.getElementById('lg-phone').value,document.getElementById('lg-pass').value)">Entrar</button>
+    </div>
+    <div class="m-card">
+      <h3 style="font-size:15px;margin-bottom:6px">Criar conta</h3>
+      <p style="font-size:13px;color:var(--ink-2);margin-bottom:10px">
+        Seu telefone precisa ter um convite pré-registrado por alguém que já usa o app.</p>
+      <div class="field"><label for="rg-phone">Telefone convidado</label>
+        <input id="rg-phone" inputmode="tel" placeholder="Número com DDD"></div>
+      <button class="btn btn-dark" style="width:100%;justify-content:center"
+        onclick="checkPhoneInvite(document.getElementById('rg-phone').value)">Verificar convite</button>
+    </div>
+    <p style="text-align:center;font-size:12px;color:var(--ink-3)">
+      Demo — Lucas: <span class="num">937259259</span>/admin123 ·
+      Pat: <span class="num">22988052238</span>/chat123<br>
+      Convite pendente: <span class="num">11999990000</span></p>`}
+  </div></div>
+  <div class="m-tabs"></div>`;
+}
+
+function mobileMain(u){
+  if(!u){ S.mobileScreen='auth'; return mobileAuth(); }
+  if(u.status!=='active'){
+    return `
+    <div class="m-body"><div class="m-sec" style="padding-top:70px;text-align:center">
+      <div style="font-size:52px">${u.status==='pending'?'⏳':'🚫'}</div>
+      <h2 style="margin:14px 0 8px">${u.status==='pending'?'Aguardando aprovação':'Conta suspensa'}</h2>
+      <p style="color:var(--ink-2);font-size:14.5px;max-width:30ch;margin:0 auto">
+        ${u.status==='pending'
+          ?'Sua conta foi criada e está em análise por um administrador.'
+          :'Sua conta foi suspensa. Fale com um administrador.'}</p>
+      <button class="btn" style="margin-top:22px" onclick="logout()">Sair</button>
+    </div></div><div class="m-tabs"></div>`;
+  }
+  const tabs = [
+    ['wallet','Carteira','💰','viewBalances'],
+    ['chat','Chat','💬','useChat'],
+    ['invites','Convites','✈','createInvites'],
+    ['profile','Perfil','👤',null]
+  ].filter(([,, ,p])=>!p||can(u,p));
+  if(!tabs.some(([k])=>k===S.mobileTab)) S.mobileTab = tabs[0][0];
+  const bodies = {wallet:mWallet,chat:mChat,invites:mInvites,profile:mProfile};
+  return `${bodies[S.mobileTab](u)}
+  <div class="m-tabs">${tabs.map(([k,l,i])=>`
+    <button class="m-tab ${S.mobileTab===k?'on':''}" onclick="S.mobileTab='${k}';S.chatWith=null;render()">
+      <span class="ic">${i}</span>${l}</button>`).join('')}</div>`;
+}
+
+function mWallet(u){
+  const myWd = DB.withdrawals.filter(w=>w.clientId===u.id).sort((a,b)=>b.requestedAt-a.requestedAt);
+  const myPay = DB.payments.filter(p=>p.clientId===u.id).sort((a,b)=>b.requestedAt-a.requestedAt);
+  return `
+  <div class="m-head"><h2>Carteira</h2></div>
+  <div class="m-body"><div class="m-sec">
+    <div class="m-card">
+      ${CURRENCIES.map(c=>`
+        <div class="bal-row">
+          <div class="cur">${c.code}<small>${c.name}</small></div>
+          <div class="num" style="font-weight:600">${fmtMoney(u.wallet[c.code],c.code)}</div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <button class="btn btn-blue" style="flex:1;justify-content:center" onclick="openModal('withdraw')">⬇ Sacar</button>
+      <button class="btn btn-dark" style="flex:1;justify-content:center" onclick="openModal('pay')">▤ Pagar</button>
+    </div>
+    ${myWd.length||myPay.length?`
+    <div class="m-card">
+      <h3 style="font-size:14px;margin-bottom:8px">Movimentações</h3>
+      ${myWd.map(w=>`
+        <div class="bal-row"><div><b style="font-size:14px">Saque ${w.currency}</b>
+          <div class="cell-sub">${fmtDate(w.requestedAt)}</div></div>
+        <div style="text-align:right"><div class="num">−${fmtMoney(w.amount,w.currency)}</div>
+          <span class="badge ${WD_BADGE[w.status]}">${WD_LABEL[w.status]}</span></div></div>`).join('')}
+      ${myPay.map(p=>`
+        <div class="bal-row"><div><b style="font-size:14px">${PAY_TYPES[p.type]} → ${esc(p.beneficiary)}</b>
+          <div class="cell-sub">${fmtDate(p.requestedAt)}</div></div>
+        <div style="text-align:right"><div class="num">−${fmtMoney(p.amount,p.currency)}</div>
+          <span class="badge ${WD_BADGE[p.status]}">${WD_LABEL[p.status]}</span></div></div>`).join('')}
+    </div>`:''}
+  </div></div>
+  ${modalHTML()}`;
+}
+
+function mChat(u){
+  if(S.chatWith){
+    const peer = userById(S.chatWith);
+    const msgs = DB.messages
+      .filter(m=>(m.from===u.id&&m.to===peer.id)||(m.from===peer.id&&m.to===u.id))
+      .sort((a,b)=>a.at-b.at);
+    setTimeout(()=>{ const b=document.getElementById('chat-scroll'); if(b) b.scrollTop=b.scrollHeight; },0);
+    return `
+    <div class="m-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="S.chatWith=null;render()" style="font-size:20px;color:var(--accent)">‹</button>
+        <div class="avatar" style="width:34px;height:34px;font-size:14px">${esc(peer.name[0])}</div>
+        <h2 style="font-size:17px">${esc(peer.name)}</h2>
+      </div>
+      ${can(u,'useVoiceCalls')&&can(peer,'useVoiceCalls')?`
+        <button onclick="startCall('${peer.id}')" style="font-size:21px" aria-label="Ligar">📞</button>`:''}
+    </div>
+    <div class="m-body" id="chat-scroll">
+      <div class="e2ee">🔒 Cifrado ponta-a-ponta — protocolo Signal (simulado no protótipo)</div>
+      <div class="chat-body">${msgs.map(m=>`
+        <div class="bubble ${m.from===u.id?'me':'them'}">${esc(m.text)}
+          <time>${fmtTime(m.at)}</time></div>`).join('')}
+      </div>
+    </div>
+    <div class="chat-input">
+      <input id="msg-input" placeholder="Mensagem"
+        onkeydown="if(event.key==='Enter'){sendMsg('${peer.id}',this.value);this.value=''}">
+      <button class="btn btn-blue" onclick="const i=document.getElementById('msg-input');sendMsg('${peer.id}',i.value);i.value=''">➤</button>
+    </div>`;
+  }
+  const contacts = DB.users.filter(x=>x.id!==u.id && can(x,'useChat'));
+  const lastMsg = id => DB.messages
+    .filter(m=>(m.from===u.id&&m.to===id)||(m.from===id&&m.to===u.id))
+    .sort((a,b)=>b.at-a.at)[0];
+  const sorted = [...contacts].sort((a,b)=>(lastMsg(b.id)?.at||0)-(lastMsg(a.id)?.at||0));
+  return `
+  <div class="m-head"><h2>Chat</h2></div>
+  <div class="m-body">
+    ${sorted.length?sorted.map(c=>{
+      const lm = lastMsg(c.id);
+      return `<button class="m-list-item" onclick="S.chatWith='${c.id}';render()">
+        <div class="avatar">${esc(c.name[0])}</div>
+        <div class="info"><div class="nm">${esc(c.name)}</div>
+          <div class="pv">${lm?esc(lm.text):'Toque para conversar'}</div></div>
+        ${lm?`<span class="cell-sub num">${fmtTime(lm.at)}</span>`:''}
+      </button>`;}).join('')
+    :`<div class="empty" style="padding-top:60px">Nenhum contato disponível.</div>`}
+  </div>`;
+}
+
+function mInvites(u){
+  const mine = DB.invites.filter(i=>i.createdBy===u.id).sort((a,b)=>b.createdAt-a.createdAt);
+  return `
+  <div class="m-head"><h2>Convites</h2>
+    <button class="btn btn-blue btn-sm" onclick="openModal('invite')">＋ Convidar</button></div>
+  <div class="m-body"><div class="m-sec">
+    <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">
+      Você pré-registra o telefone de quem quer convidar; só esse número conseguirá criar conta.</p>
+    ${mine.length?mine.map(i=>`
+      <div class="m-card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b class="num">${esc(i.phone)}</b>
+          <span class="badge ${INV_BADGE[i.status]}">${INV_LABEL[i.status]}</span>
+        </div>
+        <div class="cell-sub" style="margin:4px 0">Código <span class="num">${i.code}</span> ·
+          expira ${fmtDate(i.expiresAt)}</div>
+        ${i.acceptedBy?`<div class="cell-sub">Aceito por ${esc(userName(i.acceptedBy))}</div>`:''}
+        <div class="chips">${roleChips(i.grantedRoles)}</div>
+        ${i.status==='pending'?`
+          <button class="btn btn-sm btn-red" style="margin-top:10px" onclick="revokeInvite('${i.id}')">Revogar</button>`:''}
+      </div>`).join('')
+    :`<div class="empty">Você ainda não convidou ninguém.</div>`}
+  </div></div>
+  ${modalHTML()}`;
+}
+
+function mProfile(u){
+  const inviter = u.invitedBy ? userById(u.invitedBy) : null;
+  return `
+  <div class="m-head"><h2>Perfil</h2></div>
+  <div class="m-body"><div class="m-sec">
+    <div class="m-card" style="text-align:center">
+      <div class="avatar" style="width:66px;height:66px;font-size:26px;margin:0 auto 10px">${esc(u.name[0])}</div>
+      <h3>${esc(u.name)}</h3>
+      <div class="cell-sub num">${esc(u.phone)}</div>
+      <div class="chips" style="justify-content:center;margin-top:8px">${roleChips(u.roles)}</div>
+    </div>
+    <div class="m-card">
+      <div class="bal-row"><span>Status</span>
+        <span class="badge ${STATUS_BADGE[u.status]}">${STATUS_LABEL[u.status]}</span></div>
+      <div class="bal-row"><span>Convidado por</span>
+        <b>${inviter?esc(inviter.name):'Usuário raiz'}</b></div>
+      <div class="bal-row"><span>Membro desde</span>
+        <b class="num">${fmtDate(u.createdAt)}</b></div>
+      <div class="bal-row"><span>Permissões ativas</span>
+        <b class="num">${userPerms(u).size}</b></div>
+    </div>
+    <button class="btn btn-red" style="width:100%;justify-content:center" onclick="logout()">Sair da conta</button>
+  </div></div>`;
+}
+
+/* ---------------- overlay de ligação ---------------- */
+function callOverlay(){
+  if(CALL.state==='idle') return '';
+  const peer = userById(CALL.peer);
+  const nm = esc(peer?.name || 'Desconhecido');
+  const st = {outgoing:'Chamando…',incoming:'Ligação recebida',active:''}[CALL.state];
+  return `
+  <div class="call">
+    <div class="avatar ${CALL.state!=='active'?'pulse':''}">${esc((peer?.name||'?')[0])}</div>
+    <h3>${nm}</h3>
+    <div class="st">${CALL.state==='active'
+      ? `🔒 Ligação cifrada · <span id="call-timer" class="num">00:00</span>` : st}</div>
+    <div class="acts">
+      ${CALL.state==='incoming'?`
+        <button class="call-btn cb-red" onclick="declineCall()" aria-label="Recusar">✕</button>
+        <button class="call-btn cb-green pulse" onclick="acceptCall()" aria-label="Atender">📞</button>`
+      :`<button class="call-btn cb-red" onclick="endCall()" aria-label="Encerrar">✕</button>`}
+    </div>
+  </div>`;
+}
+
+/* boot */
+expireInvites();
+render();
+</script>
