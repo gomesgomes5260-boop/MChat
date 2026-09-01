@@ -342,7 +342,100 @@ const INV_LABEL = {pending:'Pendente',accepted:'Aceito',revoked:'Revogado',expir
 const INV_BADGE = {pending:'b-warn',accepted:'b-ok',revoked:'b-bad',expired:'b-gray'};
 const WD_LABEL = {pending:'Pendente',approved:'Aprovado',completed:'Concluído',cancelled:'Cancelado'};
 const WD_BADGE = {pending:'b-warn',approved:'b-blue',completed:'b-ok',cancelled:'b-bad'};
-const PAY_TYPES = {pix:'PIX',transfer:'Transferência',boleto:'Boleto',wire:'Wire Internacional'};
+const PAY_TYPES = {pix:'PIX',boleto:'Boleto'};
+
+/* ---------- leitura offline de destino de pagamento (sem BaaS) ----------
+   Boleto: valida a linha digitável (DVs módulo 10 — FEBRABAN) e extrai
+   banco, valor e vencimento (fator de vencimento). PIX: detecta o tipo de
+   chave e decodifica "Copia e Cola" (EMV/BR Code), que carrega nome do
+   recebedor e valor. Consultar beneficiário de boleto registrado ou
+   liquidar o pagamento exigiria banco/BaaS — a leitura, não. */
+const BANKS = {'001':'Banco do Brasil','033':'Santander','077':'Inter','104':'Caixa',
+  '237':'Bradesco','260':'Nubank','336':'C6 Bank','341':'Itaú','748':'Sicredi','756':'Sicoob'};
+
+function mod10(s){
+  let sum=0,w=2;
+  for(let i=s.length-1;i>=0;i--){ let n=+s[i]*w; if(n>9)n=Math.floor(n/10)+n%10; sum+=n; w=w===2?1:2; }
+  return (10-sum%10)%10;
+}
+function cpfValid(d){
+  if(!/^\d{11}$/.test(d)||/^(\d)\1+$/.test(d)) return false;
+  for(const len of [9,10]){
+    let sum=0;
+    for(let i=0;i<len;i++) sum += +d[i]*(len+1-i);
+    const dv=(sum*10)%11%10;
+    if(dv!==+d[len]) return false;
+  }
+  return true;
+}
+function parseBoleto(raw){
+  const d = String(raw).replace(/\D/g,'');
+  let bar=null;
+  if(d.length===47){
+    const f1=d.slice(0,9), f2=d.slice(10,20), f3=d.slice(21,31);
+    if(mod10(f1)!==+d[9]||mod10(f2)!==+d[20]||mod10(f3)!==+d[31])
+      return {ok:false,kind:'boleto',reason:'Código de boleto inválido: dígitos verificadores não conferem.'};
+    bar = d.slice(0,4)+d[32]+d.slice(33,47)+d.slice(4,9)+d.slice(10,20)+d.slice(21,31);
+  }else if(d.length===44){ bar=d; }
+  else return {ok:false,kind:'boleto',reason:'Boleto deve ter 47 dígitos (linha digitável) ou 44 (código de barras).'};
+  const bank = BANKS[bar.slice(0,3)] || 'Banco '+bar.slice(0,3);
+  const fator = +bar.slice(5,9);
+  const amount = +bar.slice(9,19) || null;
+  let due=null;
+  if(fator>0){
+    // fator de vencimento: base 07/10/1997; reinicia em 1000 = 22/02/2025.
+    const d1 = new Date(1997,9,7).getTime()+fator*86400000;
+    const d2 = new Date(2025,1,22).getTime()+(fator-1000)*86400000;
+    due = (fator>=1000 && Math.abs(d2-Date.now())<Math.abs(d1-Date.now())) ? d2 : d1;
+  }
+  return {ok:true,kind:'boleto',amount,due,
+    label:`Boleto ${bank}${due?' · venc '+fmtDate(due):''}`,
+    desc:`Boleto válido · ${bank}${due?' · vence '+fmtDate(due):''}${amount?' · '+fmtMoney(amount,'BRL'):''}`};
+}
+function parsePixEmv(raw){
+  const s = String(raw).trim();
+  if(!s.startsWith('000201')) return null;
+  const tags={}; let i=0;
+  while(i+4<=s.length){
+    const tag=s.slice(i,i+2), len=parseInt(s.slice(i+2,i+4),10);
+    if(!/^\d\d$/.test(s.slice(i+2,i+4)) || i+4+len>s.length)
+      return {ok:false,kind:'pix',reason:'Código PIX Copia e Cola malformado.'};
+    tags[tag]=s.slice(i+4,i+4+len); i+=4+len;
+  }
+  const amount = tags['54'] ? Math.round(parseFloat(tags['54'])*100) : null;
+  const name = tags['59'] || null;
+  return {ok:true,kind:'pix',amount,
+    label: name ? `${name} (PIX)` : 'PIX Copia e Cola',
+    desc:`PIX Copia e Cola válido${name?' · recebedor: '+name:''}${amount?' · '+fmtMoney(amount,'BRL'):''}`};
+}
+function detectPixKey(raw){
+  const t = String(raw).trim(), d = t.replace(/\D/g,'');
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)) return 'chave aleatória';
+  if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return 'e-mail';
+  if(d.length===14 && /^[\d./-]+$/.test(t)) return 'CNPJ';
+  if(d.length===11 && cpfValid(d) && /^[\d.-]+$/.test(t)) return 'CPF';
+  if((d.length>=10&&d.length<=13) && /^[+\d\s()-]+$/.test(t)) return 'telefone';
+  return null;
+}
+/* Análise unificada: decide sozinho se é boleto, PIX EMV ou chave PIX. */
+function analyzeDest(raw){
+  const t = String(raw||'').trim();
+  if(!t) return null;
+  const digits = t.replace(/\D/g,'');
+  if(/^[\d\s.]+$/.test(t) && (digits.length===47||digits.length===44)) return parseBoleto(t);
+  const emv = parsePixEmv(t);
+  if(emv) return emv;
+  const key = detectPixKey(t);
+  if(key) return {ok:true,kind:'pix',amount:null,
+    label:`PIX ${key}: ${t.length>30?t.slice(0,27)+'…':t}`,
+    desc:`Chave PIX reconhecida (${key}).`};
+  return {ok:false,kind:null,reason:'Não reconhecido: informe uma chave PIX, um código PIX Copia e Cola ou a linha digitável de um boleto.'};
+}
+function onPayDest(v){
+  S.payInfo = analyzeDest(v);
+  if(S.payInfo?.ok) S.payType = S.payInfo.kind;
+  render();
+}
 
 /* ---------------- banco local + sync ---------------- */
 const DB_KEY = 'mchat_db_v2';
@@ -417,6 +510,7 @@ const S = {
   uid:  sessionStorage.getItem('mchat_uid')  || null,
   adminPage:'dashboard', clientFilter:'all', clientSearch:'',
   wdFilter:'all', payFilter:'all', modal:null, modalErr:null, modalOk:null,
+  payType:'pix', payInfo:null,
   mobileScreen:'auth',   // auth | denied | main
   mobileTab:'wallet', chatWith:null, chatSearch:'', regStep:1, regInvite:null, authErr:null,
   detailClient:null
@@ -639,14 +733,20 @@ function completeWithdrawal(id){
   if(!can(me(),'approveWithdrawals') || !w || w.status!=='approved') return;
   w.status='completed'; save();
 }
-function requestPayment(type,beneficiary,amountStr,currency){
-  const u = me(), cents = parseMoney(amountStr);
+function requestPayment(destRaw,amountStr){
+  const u = me();
+  const info = analyzeDest(destRaw);
+  if(!info || !info.ok){
+    S.modalErr = info?.reason || 'Informe a chave PIX ou o código do boleto.';
+    S.payInfo = info; render(); return;
+  }
+  const cents = info.amount ?? parseMoney(amountStr);
   if(!cents){ S.modalErr='Informe um valor válido.'; render(); return; }
-  if(!beneficiary.trim()){ S.modalErr='Informe o beneficiário.'; render(); return; }
-  if((u.wallet[currency]||0) < cents){ S.modalErr='Saldo insuficiente em '+currency+'.'; render(); return; }
-  DB.payments.push({id:uid(),clientId:u.id,type,beneficiary:beneficiary.trim(),amount:cents,currency,
+  if((u.wallet.BRL||0) < cents){ S.modalErr='Saldo insuficiente em BRL.'; render(); return; }
+  DB.payments.push({id:uid(),clientId:u.id,type:info.kind,beneficiary:info.label,
+    destination:String(destRaw).trim(),amount:cents,currency:'BRL',
     status:'pending',requestedAt:Date.now(),processedBy:null,processedAt:null});
-  S.modal=null; S.modalErr=null; save(); toast('Pagamento enviado para processamento.');
+  S.modal=null; S.modalErr=null; S.payInfo=null; save(); toast('Pagamento enviado para processamento.');
 }
 function processPayment(id,complete){
   const acting = me(), p = DB.payments.find(x=>x.id===id);
@@ -672,7 +772,11 @@ function roleChips(roles){
     return `<span class="badge ${cls}">${esc(ROLES[r]?.label||r)}</span>`;
   }).join(' ');
 }
-function openModal(kind,data){ S.modal={kind,data}; S.modalErr=null; S.modalOk=null; render(); }
+function openModal(kind,data){
+  S.modal={kind,data}; S.modalErr=null; S.modalOk=null;
+  if(kind==='pay'){ S.payType='pix'; S.payInfo=null; }
+  render();
+}
 function closeModal(){ S.modal=null; S.modalErr=null; S.modalOk=null; render(); }
 function checkedRoles(prefix){
   return [...document.querySelectorAll(`input[data-rolebox="${prefix}"]:checked`)].map(el=>el.value);
@@ -1079,20 +1183,28 @@ function modalHTML(){
     </div>`;
   }
   if(kind==='pay'){
+    const info = S.payInfo;
+    const hasAmount = info?.ok && info.amount;
     body = `
     <h3>Novo Pagamento</h3>
     <div class="field"><label for="py-type">Tipo</label>
-      <select id="py-type">${Object.entries(PAY_TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
-    <div class="field"><label for="py-ben">Beneficiário</label>
-      <input id="py-ben" placeholder="Nome ou chave do beneficiário"></div>
-    <div class="field"><label for="py-cur">Moeda</label>
-      <select id="py-cur">${CURRENCIES.map(c=>`<option value="${c.code}">${c.code} — ${c.name}</option>`).join('')}</select></div>
-    <div class="field"><label for="py-val">Valor</label>
-      <input id="py-val" inputmode="decimal" placeholder="0,00"></div>
+      <select id="py-type" onchange="S.payType=this.value;render()">
+        ${Object.entries(PAY_TYPES).map(([k,v])=>`<option value="${k}" ${S.payType===k?'selected':''}>${v}</option>`).join('')}
+      </select></div>
+    <div class="field"><label for="py-dest">${S.payType==='boleto'?'Código do boleto':'Chave PIX ou Copia e Cola'}</label>
+      <input id="py-dest" oninput="onPayDest(this.value)" autocomplete="off"
+        placeholder="${S.payType==='boleto'?'Linha digitável (47 dígitos)':'CPF, e-mail, telefone, chave aleatória ou código'}"></div>
+    ${info ? (info.ok
+      ? `<div class="okbox">✓ ${esc(info.desc)}</div>`
+      : `<div class="err">${esc(info.reason)}</div>`) : ''}
+    <div class="field"><label for="py-val">Valor (BRL)</label>
+      <input id="py-val" inputmode="decimal" placeholder="0,00"
+        ${hasAmount?`value="${new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2}).format(info.amount/100)}" readonly style="opacity:.7"`:''}>
+      ${hasAmount?`<div class="cell-sub" style="margin-top:4px">Valor lido automaticamente do código.</div>`:''}</div>
     ${S.modalErr?`<div class="err">${esc(S.modalErr)}</div>`:''}
     <div class="foot">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-blue" onclick="requestPayment(document.getElementById('py-type').value,document.getElementById('py-ben').value,document.getElementById('py-val').value,document.getElementById('py-cur').value)">Enviar</button>
+      <button class="btn btn-blue" onclick="requestPayment(document.getElementById('py-dest').value,document.getElementById('py-val').value)">Enviar</button>
     </div>`;
   }
   return `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${body}</div></div>`;

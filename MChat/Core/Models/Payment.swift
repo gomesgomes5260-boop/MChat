@@ -15,17 +15,13 @@ enum PaymentStatus: String, Codable, CaseIterable {
 }
 
 enum PaymentType: String, Codable, CaseIterable {
-    case pix          = "pix"
-    case transfer     = "transfer"
-    case boleto       = "boleto"
-    case internationalWire = "wire"
+    case pix    = "pix"
+    case boleto = "boleto"
 
     var displayName: String {
         switch self {
-        case .pix:               return "PIX"
-        case .transfer:          return "Transferência"
-        case .boleto:            return "Boleto"
-        case .internationalWire: return "Wire Internacional"
+        case .pix:    return "PIX"
+        case .boleto: return "Boleto"
         }
     }
 }
@@ -36,7 +32,11 @@ struct Payment: Codable, Identifiable, Hashable {
     let clientID: UUID
     var clientName: String
     var type: PaymentType
+    /// Rótulo legível do destino (ex.: "Boleto Itaú · venc 10/10" ou
+    /// "Fulano de Tal (PIX)"), derivado de `PaymentDestination.parse`.
     var beneficiary: String
+    /// Chave PIX, código Copia e Cola ou linha digitável, como digitado.
+    var destination: String? = nil
     var amount: Money
     var status: PaymentStatus
     let requestedAt: Date

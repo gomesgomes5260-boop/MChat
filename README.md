@@ -15,6 +15,11 @@ base local (localStorage), sem backend:
 - **App Mobile** — cadastro **somente com convite pré-registrado no telefone**
   (sem convite indexado ao número, o registro é negado), carteira multi-moeda,
   chat e **ligação de voz real via WebRTC** entre duas abas do navegador.
+- **Pagamentos PIX/Boleto com leitura offline** (sem BaaS): a linha digitável
+  do boleto é validada (DVs módulo 10 — FEBRABAN) com extração de banco, valor
+  e vencimento; PIX aceita chave (CPF/CNPJ/e-mail/telefone/aleatória) ou
+  código Copia e Cola (EMV), extraindo nome do recebedor e valor. O tipo
+  PIX/Boleto é detectado automaticamente pelo que for colado.
 
 Como usar: abra o arquivo num servidor local (`python3 -m http.server` dentro
 de `prototype/`) e acesse em **duas abas** com usuários diferentes para testar
