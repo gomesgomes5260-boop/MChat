@@ -1,0 +1,20 @@
+# Xcode
+*.xcodeproj
+!project.yml
+xcuserdata/
+DerivedData/
+*.xcuserstate
+*.moved-aside
+
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+
+# Secrets
+*.pem
+*.p12
+Secrets.xcconfig

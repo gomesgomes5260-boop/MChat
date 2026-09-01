@@ -1,0 +1,44 @@
+name: MChat
+options:
+  bundleIdPrefix: com.vezoa
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+packages:
+  LibSignalClient:
+    url: https://github.com/signalapp/libsignal
+    from: 0.60.0
+  WebRTC:
+    url: https://github.com/stasel/WebRTC
+    from: 130.0.0
+
+targets:
+  MChat:
+    type: application
+    platform: iOS
+    sources:
+      - MChat
+    dependencies:
+      - package: LibSignalClient
+      - package: WebRTC
+    info:
+      path: MChat/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "Necessário para ligações de voz."
+        NSCameraUsageDescription: "Necessário para envio de mídia no chat."
+        UIBackgroundModes: [audio, voip, remote-notification]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vezoa.mchat
+        SWIFT_VERSION: "5.10"
+        TARGETED_DEVICE_FAMILY: "1"
+
+  MChatTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - MChatTests
+    dependencies:
+      - target: MChat
