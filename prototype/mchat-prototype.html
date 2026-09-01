@@ -388,6 +388,15 @@ function parseBoleto(raw){
     const d2 = new Date(2025,1,22).getTime()+(fator-1000)*86400000;
     due = (fator>=1000 && Math.abs(d2-Date.now())<Math.abs(d1-Date.now())) ? d2 : d1;
   }
+  // Boleto vencido não é aceito (compara só a data, aceita até o próprio dia).
+  if(due!=null){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dueDay = new Date(due); dueDay.setHours(0,0,0,0);
+    if(dueDay.getTime() < today.getTime()){
+      return {ok:false,kind:'boleto',
+        reason:`Boleto vencido em ${fmtDate(due)}. Boletos vencidos não podem ser pagos pelo app.`};
+    }
+  }
   return {ok:true,kind:'boleto',amount,due,
     label:`Boleto ${bank}${due?' · venc '+fmtDate(due):''}`,
     desc:`Boleto válido · ${bank}${due?' · vence '+fmtDate(due):''}${amount?' · '+fmtMoney(amount,'BRL'):''}`};

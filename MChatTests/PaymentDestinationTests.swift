@@ -16,13 +16,32 @@ final class PaymentDestinationTests: XCTestCase {
     }
 
     func testBoletoLinhaDigitavelParsed() throws {
-        let result = PaymentDestination.parse(makeLinhaDigitavel())
+        // Injeta um "agora" anterior ao vencimento (~02/06/2025) para isolar
+        // o parsing da regra de vencimento (coberta em outro teste).
+        let before = Date(timeIntervalSince1970: 1_746_057_600) // 2025-05-01
+        let result = PaymentDestination.parse(makeLinhaDigitavel(), now: before)
         guard case .success(.boleto(let bank, let due, let amount)) = result else {
             return XCTFail("Esperava boleto, obteve \(result)")
         }
         XCTAssertEqual(bank, "Itaú")
         XCTAssertEqual(amount, 55_000) // R$ 550,00
         XCTAssertNotNil(due)
+    }
+
+    func testBoletoExpiredIsRejected() {
+        // A linha de teste vence ~02/06/2025 (fator 1100). Longe no futuro → vencido.
+        let farFuture = Date(timeIntervalSince1970: 1_893_456_000) // 2030-01-01
+        guard case .failure(.boletoExpired) = PaymentDestination.parse(makeLinhaDigitavel(), now: farFuture) else {
+            return XCTFail("Boleto vencido deveria ser recusado")
+        }
+    }
+
+    func testBoletoAcceptedOnOrBeforeDueDate() throws {
+        // Antes do vencimento → aceito.
+        let before = Date(timeIntervalSince1970: 1_746_057_600) // 2025-05-01
+        guard case .success(.boleto) = PaymentDestination.parse(makeLinhaDigitavel(), now: before) else {
+            return XCTFail("Boleto ainda válido deveria ser aceito")
+        }
     }
 
     func testBoletoWrongCheckDigitRejected() {

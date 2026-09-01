@@ -21,6 +21,7 @@ enum PaymentDestination: Equatable {
     enum ParseError: LocalizedError, Equatable {
         case boletoInvalidCheckDigits
         case boletoInvalidLength
+        case boletoExpired(Date)
         case malformedEmv
         case unrecognized
 
@@ -30,6 +31,9 @@ enum PaymentDestination: Equatable {
                 return "Código de boleto inválido: dígitos verificadores não conferem."
             case .boletoInvalidLength:
                 return "Boleto deve ter 47 dígitos (linha digitável) ou 44 (código de barras)."
+            case .boletoExpired(let due):
+                let df = DateFormatter(); df.dateFormat = "dd/MM/yyyy"
+                return "Boleto vencido em \(df.string(from: due)). Boletos vencidos não podem ser pagos pelo app."
             case .malformedEmv:
                 return "Código PIX Copia e Cola malformado."
             case .unrecognized:
@@ -70,14 +74,14 @@ enum PaymentDestination: Equatable {
 
     // MARK: - Parsing
 
-    static func parse(_ raw: String) -> Result<PaymentDestination, ParseError> {
+    static func parse(_ raw: String, now: Date = Date()) -> Result<PaymentDestination, ParseError> {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .failure(.unrecognized) }
 
         let digits = trimmed.filter(\.isNumber)
         let boletoShaped = trimmed.allSatisfy { $0.isNumber || $0 == " " || $0 == "." }
         if boletoShaped && (digits.count == 47 || digits.count == 44) {
-            return parseBoleto(digits: digits)
+            return parseBoleto(digits: digits, now: now)
         }
         if trimmed.hasPrefix("000201") {
             return parsePixEmv(trimmed)
@@ -107,7 +111,7 @@ enum PaymentDestination: Equatable {
         return (10 - sum % 10) % 10
     }
 
-    private static func parseBoleto(digits d: String) -> Result<PaymentDestination, ParseError> {
+    private static func parseBoleto(digits d: String, now: Date = Date()) -> Result<PaymentDestination, ParseError> {
         func slice(_ s: String, _ range: Range<Int>) -> String {
             let start = s.index(s.startIndex, offsetBy: range.lowerBound)
             let end = s.index(s.startIndex, offsetBy: range.upperBound)
@@ -142,8 +146,14 @@ enum PaymentDestination: Equatable {
             let base2025 = Date(timeIntervalSince1970: 1_740_182_400) // 2025-02-22
             let d1 = base1997.addingTimeInterval(TimeInterval(fator) * day)
             let d2 = base2025.addingTimeInterval(TimeInterval(fator - 1000) * day)
-            let now = Date()
             due = (fator >= 1000 && abs(d2.timeIntervalSince(now)) < abs(d1.timeIntervalSince(now))) ? d2 : d1
+        }
+        // Boleto vencido não é aceito (compara por dia; aceita até o próprio vencimento).
+        if let due {
+            let cal = Calendar(identifier: .gregorian)
+            if cal.startOfDay(for: due) < cal.startOfDay(for: now) {
+                return .failure(.boletoExpired(due))
+            }
         }
         return .success(.boleto(bankName: bank, dueDate: due, amountMinor: amount))
     }
