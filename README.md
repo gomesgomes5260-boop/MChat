@@ -107,10 +107,13 @@ usuário logado.
 
 ## Signal / Ligações
 
-- `SignalProtocolManager` define o contrato de E2EE (identidade no Keychain,
-  pre-key bundles, sessões X3DH + Double Ratchet, safety numbers). A
-  implementação concreta com `LibSignalClient` entra quando o backend de troca
-  de chaves existir.
+- **E2EE implementado** sobre `LibSignalClient` (X3DH/PQXDH + Double Ratchet):
+  chaves privadas só no aparelho (Keychain), servidor repassa apenas blobs
+  cifrados e bundles públicos, sealed sender oculta o remetente, histórico só
+  local em banco cifrado (AES-GCM, fora de backup), push vazio como gatilho,
+  safety numbers, reposição de pré-chaves e mix network opcional plugável. O
+  servidor guarda apenas o mínimo do art. 15 do Marco Civil (IP + data/hora).
+  Detalhes e estado de verificação em `MChat/Core/Signal/README-E2EE.md`.
 - `CallManager` segue o desenho do app Signal: a **sinalização** da ligação
   (offer/answer/ICE) trafega dentro do canal Signal já cifrado; a mídia usa
   WebRTC (DTLS-SRTP) com STUN/TURN próprios; CallKit + PushKit para integração

@@ -8,7 +8,7 @@ options:
 packages:
   LibSignalClient:
     url: https://github.com/signalapp/libsignal
-    from: 0.60.0
+    from: 0.101.2
   WebRTC:
     url: https://github.com/stasel/WebRTC
     from: 130.0.0
