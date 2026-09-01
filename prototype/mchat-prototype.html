@@ -1,12 +1,18 @@
 <meta charset="utf-8">
 <title>MChat Protótipo</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.min.js"></script>
 <style>
   :root{
     --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
     --ground:#F1F5F9; --card:#FFFFFF; --line:#E2E8F0;
     --side:#0F1729; --side-ink:#CBD5E1;
     --accent:#1D4ED8; --ok:#16A34A; --warn:#D97706; --bad:#DC2626; --info:#7C3AED;
+    /* mundo mobile (dark fintech) */
+    --m-bg:#0A0A0E; --m-card:#16161C; --m-card2:#1E1E26; --m-line:#26262F;
+    --m-ink:#F4F4F6; --m-ink2:#9B9BA8; --m-ink3:#6E6E7A;
+    --m-ok:#4ADE80; --m-warn:#FBBF24; --m-bad:#F87171; --m-info:#A78BFA; --m-blue:#60A5FA;
+    --grad:linear-gradient(135deg,#FF8A3D 0%,#E23A2E 100%);
     --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
     --sans:'Instrument Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
   }
@@ -15,16 +21,39 @@
   body{background:var(--ground);color:var(--ink);font:15px/1.5 var(--sans)}
   button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
   input,select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);
-    border-radius:8px;padding:9px 12px;width:100%}
-  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+    border-radius:10px;padding:9px 12px;width:100%;transition:border-color .15s,box-shadow .15s}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,216,.15)}
   button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   h1,h2,h3{line-height:1.2;text-wrap:balance}
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  svg.lucide{vertical-align:-3px;flex:none}
+
+  /* ---------- movimento ---------- */
+  .btn,.nav-item,.tab,.m-tab,.m-list-item,.launch-card,.call-btn,.qa,.stat,tr{
+    transition:transform .12s ease,background .18s ease,box-shadow .18s ease,color .18s ease,border-color .18s ease,opacity .18s}
+  .btn:active,.tab:active,.m-tab:active,.qa:active,.call-btn:active,.launch-card:active{transform:scale(.96)}
+  .nav-item:active,.m-list-item:active{transform:scale(.985)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+  .content>*,.m-sec>*,.login-box,.launch>*{animation:fadeUp .3s ease both}
+  .content>*:nth-child(2),.m-sec>*:nth-child(2){animation-delay:.05s}
+  .content>*:nth-child(3),.m-sec>*:nth-child(3){animation-delay:.1s}
+  .bubble{animation:fadeUp .18s ease both}
+  .overlay{animation:fade .16s ease}
+  .modal{animation:pop .24s cubic-bezier(.2,.9,.3,1.15)}
+  .toast{animation:slideUp .28s ease}
+  .pulse{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
 
   /* ---------- botões ---------- */
-  .btn{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:8px 14px;
+  .btn{display:inline-flex;align-items:center;gap:7px;border-radius:10px;padding:8px 14px;
     font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--card)}
-  .btn:hover{background:var(--ground)}
+  .btn:hover{background:var(--ground);box-shadow:0 2px 8px rgba(15,23,42,.07)}
   .btn-dark{background:var(--ink);color:#fff;border-color:var(--ink)}
   .btn-dark:hover{background:#1E293B}
   .btn-blue{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -36,7 +65,7 @@
   .btn-sm{padding:5px 10px;font-size:13px}
 
   /* ---------- badges ---------- */
-  .badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+  .badge{display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
   .b-ok{background:#DCFCE7;color:#15803D}
   .b-warn{background:#FEF3C7;color:#B45309}
   .b-bad{background:#FEE2E2;color:#B91C1C}
@@ -52,14 +81,16 @@
     vertical-align:middle;margin-left:10px;letter-spacing:.04em}
   .launch p{color:var(--ink-2);max-width:52ch;text-align:center}
   .launch-cards{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
-  .launch-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;
-    width:290px;text-align:left;transition:box-shadow .15s,transform .15s}
-  .launch-card:hover{box-shadow:0 8px 30px rgba(15,23,42,.12);transform:translateY(-2px)}
-  .launch-card .ico{font-size:30px}
-  .launch-card h2{font-size:19px;margin:12px 0 6px}
+  .launch-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;
+    width:290px;text-align:left}
+  .launch-card:hover{box-shadow:0 12px 34px rgba(15,23,42,.14);transform:translateY(-3px)}
+  .launch-card .ico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#fff}
+  .ico-dark{background:var(--side)}
+  .ico-grad{background:var(--grad)}
+  .launch-card h2{font-size:19px;margin:14px 0 6px}
   .launch-card p{color:var(--ink-2);font-size:14px;text-align:left}
-  .hint{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;
-    padding:12px 16px;font-size:13.5px;max-width:640px}
+  .hint{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:12px;
+    padding:12px 16px;font-size:13.5px;max-width:660px}
   .hint b{font-weight:700}
 
   /* ---------- admin shell ---------- */
@@ -67,10 +98,10 @@
   .side{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh}
   .side .logo{color:#fff;font-size:20px;font-weight:700;padding:6px 10px 20px;display:flex;align-items:center;gap:8px}
   .side .logo .tag{font-size:11px;background:#1E293B;border-radius:5px;padding:2px 7px;font-weight:600;letter-spacing:.05em}
-  .nav-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;
-    border-radius:8px;font-size:14.5px;font-weight:500;color:var(--side-ink)}
+  .nav-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 12px;
+    border-radius:9px;font-size:14.5px;font-weight:500;color:var(--side-ink)}
   .nav-item:hover{background:#1E293B;color:#fff}
-  .nav-item.on{background:#1E293B;color:#fff}
+  .nav-item.on{background:#1E293B;color:#fff;box-shadow:inset 3px 0 0 #FF8A3D}
   .side .me{margin-top:auto;border-top:1px solid #1E293B;padding:14px 10px 4px;font-size:13px}
   .side .me .nm{color:#fff;font-weight:600}
   .side .me .em{color:#64748B;font-size:12px;word-break:break-all}
@@ -79,30 +110,33 @@
   .content{padding:24px 28px;display:flex;flex-direction:column;gap:18px}
 
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
-  .stat .t{display:flex;justify-content:space-between;color:var(--ink-2);font-size:14px;font-weight:500}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .stat:hover{box-shadow:0 6px 18px rgba(15,23,42,.08);transform:translateY(-2px)}
+  .stat .t{display:flex;justify-content:space-between;align-items:center;color:var(--ink-2);font-size:14px;font-weight:500}
+  .stat .t svg{color:var(--ink-3)}
   .stat .v{font-size:32px;font-weight:700;margin:6px 0 2px}
   .stat .s{color:var(--ink-3);font-size:12.5px}
 
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
   .panel .head{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px}
   table{width:100%;border-collapse:collapse;font-size:14px}
   th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
     padding:12px 18px;border-bottom:1px solid var(--line);font-weight:600}
   td{padding:13px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:hover{background:#F8FAFC}
   tr:last-child td{border-bottom:none}
   .empty{color:var(--ink-3);text-align:center;padding:34px 10px}
-  .tabs{display:inline-flex;background:#E8EDF3;border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
-  .tab{padding:6px 14px;border-radius:7px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
-  .tab.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.1)}
+  .tabs{display:inline-flex;background:#E8EDF3;border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+  .tab{padding:6px 14px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+  .tab.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.12)}
   .row-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .search-row{display:flex;gap:10px;max-width:520px}
   .cell-sub{color:var(--ink-3);font-size:12.5px}
   .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
 
   /* ---------- modal ---------- */
-  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
-  .modal{background:var(--card);border-radius:14px;width:min(440px,100%);max-height:88vh;overflow:auto;padding:22px}
+  .overlay{position:fixed;inset:0;background:rgba(10,10,14,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .modal{background:var(--card);border-radius:16px;width:min(440px,100%);max-height:88vh;overflow:auto;padding:22px}
   .modal h3{font-size:17px;margin-bottom:14px}
   .field{margin-bottom:12px}
   .field label{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
@@ -110,68 +144,126 @@
   .checks label{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:500;color:var(--ink)}
   .checks input{width:auto}
   .modal .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
-  .err{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:8px;padding:9px 12px;font-size:13.5px;margin:10px 0}
-  .okbox{background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D;border-radius:8px;padding:9px 12px;font-size:13.5px;margin:10px 0}
+  .err{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:10px;padding:9px 12px;font-size:13.5px;margin:10px 0}
+  .okbox{background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D;border-radius:10px;padding:9px 12px;font-size:13.5px;margin:10px 0}
 
-  /* ---------- login ---------- */
+  /* ---------- login admin ---------- */
   .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .login-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:30px;width:min(380px,100%)}
-  .login-box h2{margin-bottom:4px}
+  .login-box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px;width:min(380px,100%)}
+  .login-box h2{margin-bottom:4px;display:flex;align-items:center;gap:8px}
   .login-box .sub{color:var(--ink-2);font-size:14px;margin-bottom:18px}
 
-  /* ---------- mobile ---------- */
+  /* ================= MOBILE (dark fintech) ================= */
   .mob-stage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px;gap:26px;flex-wrap:wrap}
-  .phone{width:390px;height:800px;background:var(--card);border-radius:44px;border:10px solid #0B1220;
-    box-shadow:0 24px 70px rgba(15,23,42,.35);display:flex;flex-direction:column;overflow:hidden;position:relative}
-  .phone .notch{height:26px;background:var(--card);display:flex;justify-content:center;align-items:center;flex:none}
-  .phone .notch i{width:110px;height:18px;background:#0B1220;border-radius:0 0 14px 14px}
-  .m-head{padding:10px 18px 12px;border-bottom:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .m-head h2{font-size:21px}
-  .m-body{flex:1;overflow-y:auto;background:var(--ground)}
-  .m-tabs{flex:none;display:flex;border-top:1px solid var(--line);background:var(--card);padding:6px 4px 14px}
-  .m-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--ink-3);padding:6px 2px;border-radius:8px}
-  .m-tab .ic{font-size:20px}
-  .m-tab.on{color:var(--accent)}
+  .phone{width:390px;height:800px;background:var(--m-bg);color:var(--m-ink);border-radius:46px;border:10px solid #000;
+    box-shadow:0 30px 80px rgba(10,10,14,.5);display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .phone .notch{height:28px;background:var(--m-bg);display:flex;justify-content:center;align-items:center;flex:none}
+  .phone .notch i{width:110px;height:20px;background:#000;border-radius:0 0 14px 14px}
+  .phone input,.phone select{background:var(--m-card2);border-color:var(--m-line);color:var(--m-ink);border-radius:12px}
+  .phone input::placeholder{color:var(--m-ink3)}
+  .phone input:focus,.phone select:focus{border-color:#FF8A3D;box-shadow:0 0 0 3px rgba(255,138,61,.18)}
+  .phone button:focus-visible{outline-color:#FF8A3D}
+
+  .m-head{padding:12px 18px 12px;border-bottom:1px solid var(--m-line);flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--m-bg)}
+  .m-head h2{font-size:21px;font-weight:700}
+  .icbtn{width:38px;height:38px;border-radius:50%;background:var(--m-card);border:1px solid var(--m-line);
+    display:inline-flex;align-items:center;justify-content:center;color:var(--m-ink)}
+  .icbtn:hover{background:var(--m-card2)}
+  .m-body{flex:1;overflow-y:auto;background:var(--m-bg)}
+  .m-tabs{flex:none;display:flex;border-top:1px solid var(--m-line);background:var(--m-bg);padding:8px 4px 16px}
+  .m-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:600;color:var(--m-ink3);padding:6px 2px;border-radius:10px}
+  .m-tab.on{color:var(--m-ink)}
   .m-sec{padding:16px}
-  .m-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
-  .bal-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+  .m-card{background:var(--m-card);border:1px solid var(--m-line);border-radius:18px;padding:16px;margin-bottom:12px}
+
+  /* botões no mundo mobile */
+  .phone .btn{background:var(--m-card2);border-color:var(--m-line);color:var(--m-ink)}
+  .phone .btn:hover{background:#26262F;box-shadow:none}
+  .phone .btn-blue{background:#fff;color:#0A0A0E;border-color:#fff;font-weight:700}
+  .phone .btn-blue:hover{background:#E8E8EC}
+  .phone .btn-dark{background:var(--m-card2);color:var(--m-ink);border-color:var(--m-line)}
+  .phone .btn-dark:hover{background:#26262F}
+  .phone .btn-red{color:var(--m-bad);border-color:rgba(248,113,113,.35)}
+  .phone .btn-red:hover{background:rgba(248,113,113,.1)}
+  /* badges no mundo mobile */
+  .phone .b-ok{background:rgba(74,222,128,.14);color:var(--m-ok)}
+  .phone .b-warn{background:rgba(251,191,36,.14);color:var(--m-warn)}
+  .phone .b-bad{background:rgba(248,113,113,.14);color:var(--m-bad)}
+  .phone .b-info{background:rgba(167,139,250,.16);color:var(--m-info)}
+  .phone .b-blue{background:rgba(96,165,250,.16);color:var(--m-blue)}
+  .phone .b-gray{background:#26262F;color:var(--m-ink2)}
+  .phone .b-super{background:#fff;color:#0A0A0E}
+  .phone .err{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3);color:var(--m-bad)}
+  .phone .okbox{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:var(--m-ok)}
+  .phone .cell-sub{color:var(--m-ink3)}
+  .phone .field label{color:var(--m-ink2)}
+  .phone .empty{color:var(--m-ink3)}
+  .phone .modal{background:var(--m-card);color:var(--m-ink)}
+  .phone .checks label{color:var(--m-ink)}
+  .phone h3{color:var(--m-ink)}
+
+  /* carteira (ref fintech dark) */
+  .hero{background:var(--grad);border-radius:22px;padding:20px;color:#fff;margin-bottom:14px;
+    box-shadow:0 14px 34px rgba(226,58,46,.25);position:relative;overflow:hidden}
+  .hero::after{content:'';position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.12)}
+  .hero .lbl{font-size:13px;opacity:.85;font-weight:500}
+  .hero .amt{font-size:34px;font-weight:700;letter-spacing:-.5px;margin:2px 0 12px}
+  .hero .amt small{font-size:18px;font-weight:600;opacity:.85}
+  .hero .row{display:flex;gap:8px;position:relative;z-index:1}
+  .hero .chip{background:rgba(0,0,0,.22);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600}
+  .qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .qa{background:var(--m-card);border:1px solid var(--m-line);border-radius:16px;padding:13px 6px 11px;
+    display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:var(--m-ink)}
+  .qa:hover{background:var(--m-card2)}
+  .qa svg{color:var(--m-ink)}
+  .qa[disabled]{opacity:.4;cursor:not-allowed}
+  .bal-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--m-line)}
   .bal-row:last-child{border-bottom:none}
-  .bal-row .cur{font-weight:600}
-  .bal-row .cur small{display:block;color:var(--ink-3);font-weight:500;font-size:12px}
-  .m-list-item{display:flex;align-items:center;gap:12px;background:var(--card);border-bottom:1px solid var(--line);padding:13px 16px;width:100%;text-align:left}
-  .m-list-item:active{background:var(--ground)}
-  .avatar{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+  .bal-row .cur{font-weight:600;display:flex;align-items:center;gap:10px}
+  .bal-row .cur .sym{width:36px;height:36px;border-radius:12px;background:var(--m-card2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--m-ink2)}
+  .bal-row .cur small{display:block;color:var(--m-ink3);font-weight:500;font-size:12px}
+  .sec-title{font-size:15px;font-weight:700;margin:4px 2px 10px;color:var(--m-ink)}
+
+  /* chat (ref clean messenger, traduzida pro dark) */
+  .chat-search{padding:12px 16px 4px}
+  .m-list-item{display:flex;align-items:center;gap:12px;background:transparent;border-bottom:1px solid var(--m-line);padding:13px 18px;width:100%;text-align:left;color:var(--m-ink)}
+  .m-list-item:hover{background:var(--m-card)}
+  .avatar{width:44px;height:44px;border-radius:50%;background:var(--m-card2);color:var(--m-ink);
+    display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;border:1px solid var(--m-line)}
+  .avatar.grad{background:var(--grad);color:#fff;border:none}
   .m-list-item .info{flex:1;min-width:0}
   .m-list-item .nm{font-weight:600}
-  .m-list-item .pv{color:var(--ink-3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-  /* chat */
+  .m-list-item .pv{color:var(--m-ink3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chat-body{display:flex;flex-direction:column;gap:6px;padding:14px}
-  .bubble{max-width:75%;padding:9px 13px;border-radius:16px;font-size:14.5px;word-break:break-word}
-  .bubble.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:5px}
-  .bubble.them{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
-  .bubble time{display:block;font-size:10.5px;opacity:.7;margin-top:2px}
-  .chat-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--card);flex:none}
-  .chat-input input{border-radius:999px}
-  .e2ee{color:var(--ink-3);font-size:11.5px;text-align:center;padding:8px 20px}
+  .bubble{max-width:76%;padding:10px 14px;border-radius:18px;font-size:14.5px;word-break:break-word;line-height:1.4}
+  .bubble.me{align-self:flex-end;background:#fff;color:#0A0A0E;border-bottom-right-radius:6px}
+  .bubble.them{align-self:flex-start;background:var(--m-card2);color:var(--m-ink);border-bottom-left-radius:6px}
+  .bubble time{display:block;font-size:10.5px;opacity:.55;margin-top:3px}
+  .chat-input{display:flex;gap:8px;padding:10px 12px 14px;border-top:1px solid var(--m-line);background:var(--m-bg);flex:none;align-items:center}
+  .chat-input input{border-radius:999px;padding:11px 16px}
+  .send-btn{width:44px;height:44px;border-radius:50%;background:#fff;color:#0A0A0E;flex:none;
+    display:flex;align-items:center;justify-content:center}
+  .send-btn:hover{background:#E8E8EC}
+  .send-btn:active{transform:scale(.9)}
+  .e2ee{color:var(--m-ink3);font-size:11.5px;text-align:center;padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:6px}
 
-  /* call overlay */
-  .call{position:absolute;inset:0;background:linear-gradient(180deg,#0B1220,#1E293B);color:#fff;z-index:30;
+  /* ligação */
+  .call{position:absolute;inset:0;background:linear-gradient(180deg,#0A0A0E 0%,#1A1A22 100%);color:#fff;z-index:30;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px}
-  .call .avatar{width:86px;height:86px;font-size:30px;background:#334155}
-  .call h3{font-size:23px}
-  .call .st{color:#94A3B8;font-size:14px}
-  .call .acts{display:flex;gap:26px;margin-top:26px}
-  .call-btn{width:62px;height:62px;border-radius:50%;font-size:26px;display:flex;align-items:center;justify-content:center;color:#fff}
-  .cb-red{background:var(--bad)}.cb-green{background:var(--ok)}
-  .pulse{animation:pulse 1.4s ease-in-out infinite}
-  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
-  @media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+  .call .avatar{width:92px;height:92px;font-size:32px}
+  .call h3{font-size:24px}
+  .call .st{color:var(--m-ink2);font-size:14px;display:flex;align-items:center;gap:7px}
+  .call .acts{display:flex;gap:28px;margin-top:28px}
+  .call-btn{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff}
+  .cb-red{background:#E23A2E}.cb-green{background:#22C55E}
 
   .back-link{position:fixed;top:14px;left:14px;z-index:60;background:var(--card);border:1px solid var(--line);
-    border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(15,23,42,.12)}
+    border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;box-shadow:0 2px 10px rgba(15,23,42,.12);
+    display:inline-flex;align-items:center;gap:6px;transition:transform .12s,box-shadow .15s}
+  .back-link:hover{box-shadow:0 4px 14px rgba(15,23,42,.18)}
+  .back-link:active{transform:scale(.95)}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
-    border-radius:10px;padding:10px 18px;font-size:14px;z-index:99;box-shadow:0 8px 24px rgba(15,23,42,.3)}
+    border-radius:12px;padding:11px 18px;font-size:14px;z-index:99;box-shadow:0 10px 30px rgba(15,23,42,.35)}
   @media (max-width:900px){.admin{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}.side .me{display:none}}
 </style>
 
@@ -229,6 +321,7 @@ const CURRENCIES = [
 const uid = () => crypto.randomUUID();
 const normPhone = p => String(p||'').replace(/\D/g,'');
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ic = (name,size=18) => `<i data-lucide="${name}" style="width:${size}px;height:${size}px"></i>`;
 function fmtMoney(cents,code){
   return new Intl.NumberFormat('pt-BR',{style:'currency',currency:code}).format((cents||0)/100);
 }
@@ -325,7 +418,7 @@ const S = {
   adminPage:'dashboard', clientFilter:'all', clientSearch:'',
   wdFilter:'all', payFilter:'all', modal:null, modalErr:null, modalOk:null,
   mobileScreen:'auth',   // auth | denied | main
-  mobileTab:'wallet', chatWith:null, regStep:1, regInvite:null, authErr:null,
+  mobileTab:'wallet', chatWith:null, chatSearch:'', regStep:1, regInvite:null, authErr:null,
   detailClient:null
 };
 function me(){ return S.uid ? userById(S.uid) : null; }
@@ -380,7 +473,7 @@ async function acceptCall(){
   }catch(e){ toast('Falha ao atender: '+e.message); endCall(); }
   render();
 }
-function declineCall(){ rtc.postMessage({type:'hangup',from:S.uid,to:CALL.peer}); endCall(); }
+function declineCall(){ rtc.postMessage({type:'hangup',from:S.uid,to:CALL.peer}); cleanupCall(); }
 function endCall(){
   if(CALL.state==='idle') return;
   rtc.postMessage({type:'hangup',from:S.uid,to:CALL.peer});
@@ -589,10 +682,23 @@ function checkedRoles(prefix){
 function render(){
   preserveFocus(()=> {
     const app = document.getElementById('app');
-    if(!S.mode){ app.innerHTML = viewLauncher(); return; }
-    if(S.mode==='admin') app.innerHTML = viewAdmin();
+    if(!S.mode) app.innerHTML = viewLauncher();
+    else if(S.mode==='admin') app.innerHTML = viewAdmin();
     else app.innerHTML = viewMobile();
+    drawIcons();
   });
+}
+/* Ícones Lucide com fallback: tenta o cdnjs se o jsdelivr falhar; sem
+   rede, a UI degrada para texto (todos os controles têm rótulo). */
+let iconRetry = false;
+function drawIcons(){
+  if(window.lucide){ lucide.createIcons(); return; }
+  if(iconRetry) return;
+  iconRetry = true;
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/lucide/0.294.0/umd/lucide.min.js';
+  s.onload = () => { if(window.lucide) lucide.createIcons(); };
+  document.head.appendChild(s);
 }
 let focusMemo=null;
 function preserveFocus(fn){
@@ -616,12 +722,12 @@ function viewLauncher(){
        convites por telefone, roles, saques, pagamentos, chat e ligações antes do backend.</p>
     <div class="launch-cards">
       <button class="launch-card" onclick="setMode('admin')">
-        <div class="ico">🖥️</div>
+        <div class="ico ico-dark">${ic('monitor',22)}</div>
         <h2>Painel Admin (web)</h2>
         <p>Dashboard, clientes, saques, pagamentos, usuários e convites — como no painel Vezoa.</p>
       </button>
       <button class="launch-card" onclick="setMode('mobile')">
-        <div class="ico">📱</div>
+        <div class="ico ico-grad">${ic('smartphone',22)}</div>
         <h2>App Mobile (iOS)</h2>
         <p>Cadastro por convite indexado ao telefone, carteira, chat e ligação de voz.</p>
       </button>
@@ -635,7 +741,7 @@ function viewLauncher(){
       <b>Chat e ligação:</b> abra em <b>duas abas</b> com usuários diferentes.
       Telefone com convite pré-registrado para testar cadastro: <b class="num">11999990000</b>.
     </div>
-    <button class="btn btn-sm" onclick="resetDB()">↺ Recriar base de demonstração</button>
+    <button class="btn btn-sm" onclick="resetDB()">${ic('refresh-ccw',14)} Recriar base de demonstração</button>
   </div>`;
 }
 
@@ -644,12 +750,12 @@ function viewAdmin(){
   const u = me();
   if(!u) return viewAdminLogin();
   const nav = [
-    ['dashboard','Dashboard','▦','viewDashboard'],
-    ['clients','Clientes','👥','viewClients'],
-    ['withdrawals','Saques','⬇','viewWithdrawals'],
-    ['payments','Pagamentos','▤','viewPayments'],
-    ['users','Usuários','🛡','viewUsers'],
-    ['invites','Convites','✈','viewAllInvites']
+    ['dashboard','Dashboard','layout-dashboard','viewDashboard'],
+    ['clients','Clientes','users','viewClients'],
+    ['withdrawals','Saques','arrow-down-circle','viewWithdrawals'],
+    ['payments','Pagamentos','credit-card','viewPayments'],
+    ['users','Usuários','shield-check','viewUsers'],
+    ['invites','Convites','send','viewAllInvites']
   ].filter(([,, ,p])=>can(u,p));
   if(!nav.some(([k])=>k===S.adminPage)) S.adminPage = nav[0]?.[0] || 'dashboard';
   const pages = {dashboard:pageDashboard,clients:pageClients,withdrawals:pageWithdrawals,
@@ -657,17 +763,17 @@ function viewAdmin(){
   const titles = {dashboard:'Dashboard',clients:'Clientes',withdrawals:'Saques',
     payments:'Pagamentos',users:'Usuários',invites:'Convites'};
   return `
-  <button class="back-link" onclick="goHome()">← Início</button>
+  <button class="back-link" onclick="goHome()">${ic('arrow-left',14)} Início</button>
   <div class="admin">
     <aside class="side">
       <div class="logo">MChat <span class="tag">Admin</span></div>
-      ${nav.map(([k,l,i])=>`
+      ${nav.map(([k,l,icn])=>`
         <button class="nav-item ${S.adminPage===k?'on':''}" onclick="S.adminPage='${k}';S.detailClient=null;render()">
-          <span>${i}</span> ${l}</button>`).join('')}
+          ${ic(icn,17)} ${l}</button>`).join('')}
       <div class="me">
         <div class="nm">${esc(u.name)}</div>
         <div class="em">${esc(u.email||u.phone)}</div>
-        <button class="btn btn-sm" style="margin-top:10px" onclick="logout()">⎋ Sair</button>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="logout()">${ic('log-out',14)} Sair</button>
       </div>
     </aside>
     <div class="main">
@@ -679,7 +785,7 @@ function viewAdmin(){
 }
 function viewAdminLogin(){
   return `
-  <button class="back-link" onclick="goHome()">← Início</button>
+  <button class="back-link" onclick="goHome()">${ic('arrow-left',14)} Início</button>
   <div class="login-wrap"><div class="login-box">
     <h2>MChat <span class="badge b-super">Admin</span></h2>
     <div class="sub">Acesso restrito a usuários com permissões administrativas.</div>
@@ -699,12 +805,12 @@ function viewAdminLogin(){
 function pageDashboard(){
   const us = DB.users;
   const stats = [
-    ['Total de Clientes',us.length,'Clientes cadastrados','👥'],
-    ['Clientes Ativos',us.filter(x=>x.status==='active').length,'Com conta ativa','✅'],
-    ['Saques Pendentes',DB.withdrawals.filter(w=>w.status==='pending').length,'Aguardando aprovação','⬇'],
-    ['Pagamentos Pendentes',DB.payments.filter(p=>p.status==='pending').length,'Aguardando processamento','▤'],
-    ['Aguardando Aprovação Manual',us.filter(x=>x.status==='pending').length,'Clientes com aprovação pendente','🕐'],
-    ['Clientes Suspensos',us.filter(x=>x.status==='suspended').length,'Contas suspensas','🚫']
+    ['Total de Clientes',us.length,'Clientes cadastrados','users'],
+    ['Clientes Ativos',us.filter(x=>x.status==='active').length,'Com conta ativa','user-check'],
+    ['Saques Pendentes',DB.withdrawals.filter(w=>w.status==='pending').length,'Aguardando aprovação','arrow-down-circle'],
+    ['Pagamentos Pendentes',DB.payments.filter(p=>p.status==='pending').length,'Aguardando processamento','credit-card'],
+    ['Aguardando Aprovação Manual',us.filter(x=>x.status==='pending').length,'Clientes com aprovação pendente','clock'],
+    ['Clientes Suspensos',us.filter(x=>x.status==='suspended').length,'Contas suspensas','user-x']
   ];
   const quick = [
     ['Saques para aprovar',DB.withdrawals.filter(w=>w.status==='pending').length,'withdrawals'],
@@ -712,14 +818,14 @@ function pageDashboard(){
     ['Clientes para aprovar',us.filter(x=>x.status==='pending').length,'clients']
   ];
   return `
-  <div class="cards">${stats.map(([t,v,s,i])=>`
-    <div class="stat"><div class="t">${t}<span>${i}</span></div>
+  <div class="cards">${stats.map(([t,v,s,icn])=>`
+    <div class="stat"><div class="t">${t}${ic(icn,17)}</div>
     <div class="v num">${v}</div><div class="s">${s}</div></div>`).join('')}
   </div>
   <div class="panel" style="max-width:520px">
-    <div class="head">📈 Ações Rápidas</div>
+    <div class="head">${ic('zap',16)} Ações Rápidas</div>
     ${quick.map(([t,v,pg])=>`
-      <button class="m-list-item" onclick="S.adminPage='${pg}';render()" style="border-radius:0">
+      <button class="m-list-item" style="border-radius:0;color:var(--ink);border-color:var(--line)" onclick="S.adminPage='${pg}';render()">
         <div class="info"><div class="nm" style="font-weight:500">${t}</div></div>
         <span class="badge ${v>0?'b-warn':'b-gray'} num">${v}</span>
       </button>`).join('')}
@@ -758,8 +864,8 @@ function pageClients(u){
         <td class="num">${fmtMoney(c.wallet.BRL,'BRL')}</td>
         <td class="num">${fmtDate(c.createdAt)}</td>
         <td><div class="row-actions">
-          <button class="btn btn-sm" onclick="S.detailClient='${c.id}';render()">👁 Ver</button>
-          ${can(u,'manageClients')&&c.status==='pending'?`<button class="btn btn-sm btn-green" onclick="setUserStatus('${c.id}','active')">Aprovar</button>`:''}
+          <button class="btn btn-sm" onclick="S.detailClient='${c.id}';render()">${ic('eye',14)} Ver</button>
+          ${can(u,'manageClients')&&c.status==='pending'?`<button class="btn btn-sm btn-green" onclick="setUserStatus('${c.id}','active')">${ic('check',14)} Aprovar</button>`:''}
           ${can(u,'manageClients')&&c.status==='active'&&c.id!==u.id?`<button class="btn btn-sm btn-red" onclick="setUserStatus('${c.id}','suspended')">Suspender</button>`:''}
           ${can(u,'manageClients')&&c.status==='suspended'?`<button class="btn btn-sm btn-green" onclick="setUserStatus('${c.id}','active')">Reativar</button>`:''}
         </div></td>
@@ -770,7 +876,7 @@ function clientDetail(u,c){
   const inviter = c.invitedBy ? userById(c.invitedBy) : null;
   const invitees = DB.users.filter(x=>x.invitedBy===c.id);
   return `
-  <button class="btn btn-sm" onclick="S.detailClient=null;render()">← Voltar para a lista</button>
+  <div><button class="btn btn-sm" onclick="S.detailClient=null;render()">${ic('arrow-left',14)} Voltar para a lista</button></div>
   <div class="panel"><div class="head">${esc(c.name)}
     <span class="badge ${STATUS_BADGE[c.status]}">${STATUS_LABEL[c.status]}</span></div>
     <table><tbody>
@@ -804,7 +910,7 @@ function pageWithdrawals(u){
       <td class="num">${fmtDate(w.requestedAt)} ${fmtTime(w.requestedAt)}</td>
       <td><div class="row-actions">
         ${can(u,'approveWithdrawals')&&w.status==='pending'?`
-          <button class="btn btn-sm btn-green" onclick="decideWithdrawal('${w.id}',true)">Aprovar</button>
+          <button class="btn btn-sm btn-green" onclick="decideWithdrawal('${w.id}',true)">${ic('check',14)} Aprovar</button>
           <button class="btn btn-sm btn-red" onclick="decideWithdrawal('${w.id}',false)">Cancelar</button>`:''}
         ${can(u,'approveWithdrawals')&&w.status==='approved'?`
           <button class="btn btn-sm btn-blue" onclick="completeWithdrawal('${w.id}')">Concluir</button>`:''}
@@ -829,7 +935,7 @@ function pagePayments(u){
       <td class="num">${fmtDate(p.requestedAt)} ${fmtTime(p.requestedAt)}</td>
       <td><div class="row-actions">
         ${can(u,'processPayments')&&p.status==='pending'?`
-          <button class="btn btn-sm btn-green" onclick="processPayment('${p.id}',true)">Processar</button>
+          <button class="btn btn-sm btn-green" onclick="processPayment('${p.id}',true)">${ic('check',14)} Processar</button>
           <button class="btn btn-sm btn-red" onclick="processPayment('${p.id}',false)">Cancelar</button>`:''}
       </div></td></tr>`).join(''):`<tr><td colspan="7" class="empty">Nenhum pagamento encontrado.</td></tr>`}
     </tbody></table></div>`;
@@ -841,7 +947,7 @@ function pageUsers(u){
   return `
   <div class="panel">
     <div class="head">Usuários com funções especiais
-      ${can(u,'promoteClient')?`<button class="btn btn-dark btn-sm" onclick="openModal('promote')">➕ Promover Cliente</button>`:''}
+      ${can(u,'promoteClient')?`<button class="btn btn-dark btn-sm" onclick="openModal('promote')">${ic('user-plus',14)} Promover Cliente</button>`:''}
     </div>
     <table>
     <thead><tr><th>Nome</th><th>E-mail / Tel.</th><th>Roles</th><th>Convites</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
@@ -853,8 +959,8 @@ function pageUsers(u){
       <td><span class="badge ${STATUS_BADGE[x.status]}">${STATUS_LABEL[x.status]}</span></td>
       <td class="num">${fmtDate(x.createdAt)}</td>
       <td><div class="row-actions">
-        ${can(u,'editRoles')&&x.id!==u.id?`<button class="btn btn-sm" onclick="openModal('roles','${x.id}')">Editar Roles</button>`:''}
-        ${can(u,'manageInviteLimits')&&x.id!==u.id?`<button class="btn btn-sm" onclick="openModal('limit','${x.id}')">Limite de Convites</button>`:''}
+        ${can(u,'editRoles')&&x.id!==u.id?`<button class="btn btn-sm" onclick="openModal('roles','${x.id}')">${ic('shield',14)} Editar Roles</button>`:''}
+        ${can(u,'manageInviteLimits')&&x.id!==u.id?`<button class="btn btn-sm" onclick="openModal('limit','${x.id}')">${ic('gauge',14)} Limite de Convites</button>`:''}
       </div></td></tr>`).join('')}
     </tbody></table></div>`;
 }
@@ -864,7 +970,7 @@ function pageInvitesAdmin(u){
   return `
   <div class="panel">
     <div class="head">Convites — pré-registro por telefone
-      <button class="btn btn-dark btn-sm" onclick="openModal('invite')">✈ Novo Convite</button>
+      <button class="btn btn-dark btn-sm" onclick="openModal('invite')">${ic('send',14)} Novo Convite</button>
     </div>
     <table>
     <thead><tr><th>Telefone</th><th>Código</th><th>Convidado por</th><th>Roles no aceite</th><th>Status</th><th>Expira</th><th style="text-align:right">Ações</th></tr></thead>
@@ -879,7 +985,7 @@ function pageInvitesAdmin(u){
       <td class="num">${fmtDate(i.expiresAt)}</td>
       <td><div class="row-actions">
         ${i.status==='pending'&&(i.createdBy===u.id||can(u,'revokeInvites'))?`
-          <button class="btn btn-sm btn-red" onclick="revokeInvite('${i.id}')">Revogar</button>`:''}
+          <button class="btn btn-sm btn-red" onclick="revokeInvite('${i.id}')">${ic('x',14)} Revogar</button>`:''}
       </div></td></tr>`).join(''):`<tr><td colspan="7" class="empty">Nenhum convite.</td></tr>`}
     </tbody></table></div>`;
 }
@@ -893,7 +999,7 @@ function modalHTML(){
     const allowed = grantableRoles(u);
     body = `
     <h3>Novo Convite</h3>
-    <p style="font-size:13.5px;color:var(--ink-2);margin-bottom:12px">
+    <p style="font-size:13.5px;opacity:.75;margin-bottom:12px">
       O número informado fica pré-registrado: só ele conseguirá se cadastrar no app.</p>
     <div class="field"><label for="inv-phone">Telefone do convidado (com DDD)</label>
       <input id="inv-phone" inputmode="tel" placeholder="11 91234-5678"></div>
@@ -905,7 +1011,7 @@ function modalHTML(){
     ${S.modalOk?`<div class="okbox">${esc(S.modalOk)}</div>`:''}
     <div class="foot">
       <button class="btn" onclick="closeModal()">Fechar</button>
-      <button class="btn btn-dark" onclick="createInvite(document.getElementById('inv-phone').value,checkedRoles('inv'))">Gerar convite</button>
+      <button class="btn btn-dark" onclick="createInvite(document.getElementById('inv-phone').value,checkedRoles('inv'))">${ic('send',14)} Gerar convite</button>
     </div>`;
   }
   if(kind==='roles'){
@@ -928,7 +1034,7 @@ function modalHTML(){
     const target = userById(data);
     body = `
     <h3>Limite de Convites — ${esc(target.name)}</h3>
-    <p style="font-size:13.5px;color:var(--ink-2);margin-bottom:12px">
+    <p style="font-size:13.5px;opacity:.75;margin-bottom:12px">
       Convites usados: <b class="num">${inviteUsage(target)}</b>.
       Convites revogados ou expirados liberam a vaga. Deixe vazio para ilimitado.</p>
     <div class="field"><label for="lim-val">Limite de convites</label>
@@ -996,11 +1102,11 @@ function modalHTML(){
 function viewMobile(){
   const u = me();
   let screen;
-  if(CALL.state!=='idle') screen = mobileMain(u); // call overlay renders inside
+  if(CALL.state!=='idle') screen = mobileMain(u);
   else if(!u || S.mobileScreen==='auth' || S.mobileScreen==='denied') screen = mobileAuth();
   else screen = mobileMain(u);
   return `
-  <button class="back-link" onclick="goHome()">← Início</button>
+  <button class="back-link" onclick="goHome()">${ic('arrow-left',14)} Início</button>
   <div class="mob-stage"><div class="phone">
     <div class="notch"><i></i></div>
     ${screen}
@@ -1012,28 +1118,28 @@ function mobileAuth(){
   if(S.mobileScreen==='denied'){
     return `
     <div class="m-body"><div class="m-sec" style="padding-top:70px;text-align:center">
-      <div style="font-size:52px">🚫</div>
-      <h2 style="margin:14px 0 8px">Cadastro negado</h2>
-      <p style="color:var(--ink-2);font-size:14.5px;max-width:30ch;margin:0 auto">
+      <div style="display:flex;justify-content:center;color:var(--m-bad)">${ic('shield-x',54)}</div>
+      <h2 style="margin:16px 0 8px">Cadastro negado</h2>
+      <p style="color:var(--m-ink2);font-size:14.5px;max-width:30ch;margin:0 auto">
         Este número não possui um convite pré-registrado. O MChat é acessível
         apenas por convite de quem já usa o app.</p>
-      <button class="btn btn-dark" style="margin-top:22px" onclick="S.mobileScreen='auth';S.regStep=1;render()">← Voltar</button>
+      <button class="btn btn-blue" style="margin-top:24px" onclick="S.mobileScreen='auth';S.regStep=1;render()">${ic('arrow-left',14)} Voltar</button>
     </div></div>
     <div class="m-tabs"></div>`;
   }
   const reg2 = S.regStep===2 && S.regInvite;
   return `
-  <div class="m-body"><div class="m-sec" style="padding-top:44px">
+  <div class="m-body"><div class="m-sec" style="padding-top:40px">
     <div style="text-align:center;margin-bottom:26px">
-      <div style="font-size:44px">💬</div>
+      <div style="width:64px;height:64px;border-radius:20px;background:var(--grad);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:#fff">${ic('message-circle',30)}</div>
       <h2 style="font-size:26px">MChat</h2>
-      <p style="color:var(--ink-3);font-size:13.5px">Mensagens e finanças, só por convite.</p>
+      <p style="color:var(--m-ink3);font-size:13.5px">Mensagens e finanças, só por convite.</p>
     </div>
     ${reg2 ? `
     <div class="m-card">
       <div class="okbox" style="margin-top:0">✓ Convite encontrado para
         <b class="num">${esc(S.regInvite.phone)}</b></div>
-      <p style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Você entrará como:
+      <p style="font-size:13px;color:var(--m-ink2);margin-bottom:10px">Você entrará como:
         <span class="chips">${roleChips(S.regInvite.grantedRoles)}</span></p>
       <div class="field"><label for="rg-name">Seu nome</label><input id="rg-name" placeholder="Nome completo"></div>
       <div class="field"><label for="rg-pass">Senha</label><input id="rg-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
@@ -1056,14 +1162,14 @@ function mobileAuth(){
     </div>
     <div class="m-card">
       <h3 style="font-size:15px;margin-bottom:6px">Criar conta</h3>
-      <p style="font-size:13px;color:var(--ink-2);margin-bottom:10px">
+      <p style="font-size:13px;color:var(--m-ink2);margin-bottom:10px">
         Seu telefone precisa ter um convite pré-registrado por alguém que já usa o app.</p>
       <div class="field"><label for="rg-phone">Telefone convidado</label>
         <input id="rg-phone" inputmode="tel" placeholder="Número com DDD"></div>
       <button class="btn btn-dark" style="width:100%;justify-content:center"
         onclick="checkPhoneInvite(document.getElementById('rg-phone').value)">Verificar convite</button>
     </div>
-    <p style="text-align:center;font-size:12px;color:var(--ink-3)">
+    <p style="text-align:center;font-size:12px;color:var(--m-ink3)">
       Demo — Adm Super: <span class="num">11900000001</span>/super123 ·
       Chat: <span class="num">11900000003</span>/chat123 ·
       Chat Plus: <span class="num">11900000004</span>/plus123<br>
@@ -1077,49 +1183,70 @@ function mobileMain(u){
   if(u.status!=='active'){
     return `
     <div class="m-body"><div class="m-sec" style="padding-top:70px;text-align:center">
-      <div style="font-size:52px">${u.status==='pending'?'⏳':'🚫'}</div>
-      <h2 style="margin:14px 0 8px">${u.status==='pending'?'Aguardando aprovação':'Conta suspensa'}</h2>
-      <p style="color:var(--ink-2);font-size:14.5px;max-width:30ch;margin:0 auto">
+      <div style="display:flex;justify-content:center;color:${u.status==='pending'?'var(--m-warn)':'var(--m-bad)'}">
+        ${ic(u.status==='pending'?'clock':'shield-x',54)}</div>
+      <h2 style="margin:16px 0 8px">${u.status==='pending'?'Aguardando aprovação':'Conta suspensa'}</h2>
+      <p style="color:var(--m-ink2);font-size:14.5px;max-width:30ch;margin:0 auto">
         ${u.status==='pending'
           ?'Sua conta foi criada e está em análise por um administrador.'
           :'Sua conta foi suspensa. Fale com um administrador.'}</p>
-      <button class="btn" style="margin-top:22px" onclick="logout()">Sair</button>
+      <button class="btn" style="margin-top:24px" onclick="logout()">Sair</button>
     </div></div><div class="m-tabs"></div>`;
   }
   const tabs = [
-    ['wallet','Carteira','💰','viewBalances'],
-    ['chat','Chat','💬','useChat'],
-    ['invites','Convites','✈','createInvites'],
-    ['profile','Perfil','👤',null]
+    ['wallet','Carteira','wallet','viewBalances'],
+    ['chat','Chat','message-circle','useChat'],
+    ['invites','Convites','send','createInvites'],
+    ['profile','Perfil','user',null]
   ].filter(([,, ,p])=>!p||can(u,p));
   if(!tabs.some(([k])=>k===S.mobileTab)) S.mobileTab = tabs[0][0];
   const bodies = {wallet:mWallet,chat:mChat,invites:mInvites,profile:mProfile};
   return `${bodies[S.mobileTab](u)}
-  <div class="m-tabs">${tabs.map(([k,l,i])=>`
+  <div class="m-tabs">${tabs.map(([k,l,icn])=>`
     <button class="m-tab ${S.mobileTab===k?'on':''}" onclick="S.mobileTab='${k}';S.chatWith=null;render()">
-      <span class="ic">${i}</span>${l}</button>`).join('')}</div>`;
+      ${ic(icn,22)}${l}</button>`).join('')}</div>`;
 }
 
 function mWallet(u){
   const myWd = DB.withdrawals.filter(w=>w.clientId===u.id).sort((a,b)=>b.requestedAt-a.requestedAt);
   const myPay = DB.payments.filter(p=>p.clientId===u.id).sort((a,b)=>b.requestedAt-a.requestedAt);
+  const canInvite = can(u,'createInvites') && !(u.inviteLimit!=null && inviteUsage(u)>=u.inviteLimit);
   return `
-  <div class="m-head"><h2>Carteira</h2></div>
+  <div class="m-head">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="avatar grad" style="width:36px;height:36px;font-size:14px">${esc(u.name[0])}</div>
+      <h2>Carteira</h2>
+    </div>
+    <button class="icbtn" onclick="S.mobileTab='profile';render()" aria-label="Perfil">${ic('user',17)}</button>
+  </div>
   <div class="m-body"><div class="m-sec">
+    <div class="hero">
+      <div class="lbl">Saldo total · BRL</div>
+      <div class="amt num" id="hero-balance"><small>R$</small> ${new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2}).format((u.wallet.BRL||0)/100)}</div>
+      <div class="row">
+        ${CURRENCIES.filter(c=>c.code!=='BRL').map(c=>`
+          <span class="chip num">${c.sym} ${new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2}).format((u.wallet[c.code]||0)/100)}</span>`).join('')}
+      </div>
+    </div>
+    <div class="qa-grid">
+      <button class="qa" onclick="openModal('withdraw')">${ic('arrow-down',19)} Sacar</button>
+      <button class="qa" onclick="openModal('pay')">${ic('credit-card',19)} Pagar</button>
+      ${can(u,'createInvites')?`
+        <button class="qa" ${canInvite?'':'disabled'} onclick="${canInvite?"S.mobileTab='invites';openModal('invite')":''}">${ic('user-plus',19)} Convidar</button>`:''}
+      <button class="qa" onclick="S.mobileTab='chat';render()">${ic('message-circle',19)} Chat</button>
+    </div>
     <div class="m-card">
+      <div class="sec-title">Moedas</div>
       ${CURRENCIES.map(c=>`
         <div class="bal-row">
-          <div class="cur">${c.code}<small>${c.name}</small></div>
+          <div class="cur"><span class="sym">${c.sym}</span>
+            <span>${c.code}<small>${c.name}</small></span></div>
           <div class="num" style="font-weight:600">${fmtMoney(u.wallet[c.code],c.code)}</div>
         </div>`).join('')}
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:14px">
-      <button class="btn btn-blue" style="flex:1;justify-content:center" onclick="openModal('withdraw')">⬇ Sacar</button>
-      <button class="btn btn-dark" style="flex:1;justify-content:center" onclick="openModal('pay')">▤ Pagar</button>
-    </div>
     ${myWd.length||myPay.length?`
     <div class="m-card">
-      <h3 style="font-size:14px;margin-bottom:8px">Movimentações</h3>
+      <div class="sec-title">Movimentações</div>
       ${myWd.map(w=>`
         <div class="bal-row"><div><b style="font-size:14px">Saque ${w.currency}</b>
           <div class="cell-sub">${fmtDate(w.requestedAt)}</div></div>
@@ -1145,15 +1272,15 @@ function mChat(u){
     return `
     <div class="m-head">
       <div style="display:flex;align-items:center;gap:10px">
-        <button onclick="S.chatWith=null;render()" style="font-size:20px;color:var(--accent)">‹</button>
-        <div class="avatar" style="width:34px;height:34px;font-size:14px">${esc(peer.name[0])}</div>
+        <button class="icbtn" onclick="S.chatWith=null;render()" aria-label="Voltar">${ic('chevron-left',19)}</button>
+        <div class="avatar" style="width:36px;height:36px;font-size:14px">${esc(peer.name[0])}</div>
         <h2 style="font-size:17px">${esc(peer.name)}</h2>
       </div>
       ${can(u,'useVoiceCalls')&&can(peer,'useVoiceCalls')?`
-        <button onclick="startCall('${peer.id}')" style="font-size:21px" aria-label="Ligar">📞</button>`:''}
+        <button class="icbtn" onclick="startCall('${peer.id}')" aria-label="Ligar">${ic('phone',17)}</button>`:''}
     </div>
     <div class="m-body" id="chat-scroll">
-      <div class="e2ee">🔒 Cifrado ponta-a-ponta — protocolo Signal (simulado no protótipo)</div>
+      <div class="e2ee">${ic('lock',12)} Cifrado ponta-a-ponta — protocolo Signal (simulado no protótipo)</div>
       <div class="chat-body">${msgs.map(m=>`
         <div class="bubble ${m.from===u.id?'me':'them'}">${esc(m.text)}
           <time>${fmtTime(m.at)}</time></div>`).join('')}
@@ -1162,17 +1289,24 @@ function mChat(u){
     <div class="chat-input">
       <input id="msg-input" placeholder="Mensagem"
         onkeydown="if(event.key==='Enter'){sendMsg('${peer.id}',this.value);this.value=''}">
-      <button class="btn btn-blue" onclick="const i=document.getElementById('msg-input');sendMsg('${peer.id}',i.value);i.value=''">➤</button>
+      <button class="send-btn" onclick="const i=document.getElementById('msg-input');sendMsg('${peer.id}',i.value);i.value=''" aria-label="Enviar">${ic('send',18)}</button>
     </div>`;
   }
-  const contacts = DB.users.filter(x=>x.id!==u.id && can(x,'useChat'));
+  const q = S.chatSearch.toLowerCase();
+  const contacts = DB.users.filter(x=>x.id!==u.id && can(x,'useChat'))
+    .filter(x=>!q||x.name.toLowerCase().includes(q));
   const lastMsg = id => DB.messages
     .filter(m=>(m.from===u.id&&m.to===id)||(m.from===id&&m.to===u.id))
     .sort((a,b)=>b.at-a.at)[0];
   const sorted = [...contacts].sort((a,b)=>(lastMsg(b.id)?.at||0)-(lastMsg(a.id)?.at||0));
   return `
-  <div class="m-head"><h2>Chat</h2></div>
+  <div class="m-head"><h2>Chat</h2>
+    <button class="icbtn" aria-label="Nova conversa">${ic('square-pen',17)}</button></div>
   <div class="m-body">
+    <div class="chat-search">
+      <input id="chat-search" placeholder="Buscar" value="${esc(S.chatSearch)}"
+        oninput="S.chatSearch=this.value;render()" style="border-radius:999px;padding-left:16px">
+    </div>
     ${sorted.length?sorted.map(c=>{
       const lm = lastMsg(c.id);
       return `<button class="m-list-item" onclick="S.chatWith='${c.id}';render()">
@@ -1181,7 +1315,7 @@ function mChat(u){
           <div class="pv">${lm?esc(lm.text):'Toque para conversar'}</div></div>
         ${lm?`<span class="cell-sub num">${fmtTime(lm.at)}</span>`:''}
       </button>`;}).join('')
-    :`<div class="empty" style="padding-top:60px">Nenhum contato disponível.</div>`}
+    :`<div class="empty" style="padding-top:60px">Nenhum contato encontrado.</div>`}
   </div>`;
 }
 
@@ -1192,15 +1326,15 @@ function mInvites(u){
   return `
   <div class="m-head"><h2>Convites</h2>
     <button class="btn btn-blue btn-sm" ${exhausted?'disabled style="opacity:.45;cursor:not-allowed"':''}
-      onclick="${exhausted?'':"openModal('invite')"}">＋ Convidar</button></div>
+      onclick="${exhausted?'':"openModal('invite')"}">${ic('plus',14)} Convidar</button></div>
   <div class="m-body"><div class="m-sec">
     ${limited?`
     <div class="m-card" style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:13.5px;color:var(--ink-2)">Convites disponíveis</span>
-      <b class="num" style="color:${exhausted?'var(--bad)':'var(--ok)'}">${inviteUsage(u)} / ${u.inviteLimit}</b>
+      <span style="font-size:13.5px;color:var(--m-ink2)">Convites disponíveis</span>
+      <b class="num" style="color:${exhausted?'var(--m-bad)':'var(--m-ok)'}">${inviteUsage(u)} / ${u.inviteLimit}</b>
     </div>
     ${exhausted?`<div class="err" style="margin-top:0">Limite atingido. Peça ao Super Admin para aumentar seu limite de convites.</div>`:''}`:''}
-    <p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">
+    <p style="font-size:13px;color:var(--m-ink2);margin-bottom:12px">
       Você pré-registra o telefone de quem quer convidar; só esse número conseguirá criar conta.</p>
     ${mine.length?mine.map(i=>`
       <div class="m-card">
@@ -1213,7 +1347,7 @@ function mInvites(u){
         ${i.acceptedBy?`<div class="cell-sub">Aceito por ${esc(userName(i.acceptedBy))}</div>`:''}
         <div class="chips">${roleChips(i.grantedRoles)}</div>
         ${i.status==='pending'?`
-          <button class="btn btn-sm btn-red" style="margin-top:10px" onclick="revokeInvite('${i.id}')">Revogar</button>`:''}
+          <button class="btn btn-sm btn-red" style="margin-top:10px" onclick="revokeInvite('${i.id}')">${ic('x',13)} Revogar</button>`:''}
       </div>`).join('')
     :`<div class="empty">Você ainda não convidou ninguém.</div>`}
   </div></div>
@@ -1226,22 +1360,25 @@ function mProfile(u){
   <div class="m-head"><h2>Perfil</h2></div>
   <div class="m-body"><div class="m-sec">
     <div class="m-card" style="text-align:center">
-      <div class="avatar" style="width:66px;height:66px;font-size:26px;margin:0 auto 10px">${esc(u.name[0])}</div>
+      <div class="avatar grad" style="width:70px;height:70px;font-size:28px;margin:0 auto 10px">${esc(u.name[0])}</div>
       <h3>${esc(u.name)}</h3>
       <div class="cell-sub num">${esc(u.phone)}</div>
       <div class="chips" style="justify-content:center;margin-top:8px">${roleChips(u.roles)}</div>
     </div>
     <div class="m-card">
-      <div class="bal-row"><span>Status</span>
+      <div class="bal-row"><span style="color:var(--m-ink2)">Status</span>
         <span class="badge ${STATUS_BADGE[u.status]}">${STATUS_LABEL[u.status]}</span></div>
-      <div class="bal-row"><span>Convidado por</span>
+      <div class="bal-row"><span style="color:var(--m-ink2)">Convidado por</span>
         <b>${inviter?esc(inviter.name):'Usuário raiz'}</b></div>
-      <div class="bal-row"><span>Membro desde</span>
+      <div class="bal-row"><span style="color:var(--m-ink2)">Membro desde</span>
         <b class="num">${fmtDate(u.createdAt)}</b></div>
-      <div class="bal-row"><span>Permissões ativas</span>
+      ${u.inviteLimit!=null?`
+      <div class="bal-row"><span style="color:var(--m-ink2)">Convites</span>
+        <b class="num">${inviteUsage(u)} / ${u.inviteLimit}</b></div>`:''}
+      <div class="bal-row"><span style="color:var(--m-ink2)">Permissões ativas</span>
         <b class="num">${userPerms(u).size}</b></div>
     </div>
-    <button class="btn btn-red" style="width:100%;justify-content:center" onclick="logout()">Sair da conta</button>
+    <button class="btn btn-red" style="width:100%;justify-content:center" onclick="logout()">${ic('log-out',15)} Sair da conta</button>
   </div></div>`;
 }
 
@@ -1253,15 +1390,15 @@ function callOverlay(){
   const st = {outgoing:'Chamando…',incoming:'Ligação recebida',active:''}[CALL.state];
   return `
   <div class="call">
-    <div class="avatar ${CALL.state!=='active'?'pulse':''}">${esc((peer?.name||'?')[0])}</div>
+    <div class="avatar grad ${CALL.state!=='active'?'pulse':''}">${esc((peer?.name||'?')[0])}</div>
     <h3>${nm}</h3>
     <div class="st">${CALL.state==='active'
-      ? `🔒 Ligação cifrada · <span id="call-timer" class="num">00:00</span>` : st}</div>
+      ? `${ic('lock',13)} Ligação cifrada · <span id="call-timer" class="num">00:00</span>` : st}</div>
     <div class="acts">
       ${CALL.state==='incoming'?`
-        <button class="call-btn cb-red" onclick="declineCall()" aria-label="Recusar">✕</button>
-        <button class="call-btn cb-green pulse" onclick="acceptCall()" aria-label="Atender">📞</button>`
-      :`<button class="call-btn cb-red" onclick="endCall()" aria-label="Encerrar">✕</button>`}
+        <button class="call-btn cb-red" onclick="declineCall()" aria-label="Recusar">${ic('phone-off',24)}</button>
+        <button class="call-btn cb-green pulse" onclick="acceptCall()" aria-label="Atender">${ic('phone',24)}</button>`
+      :`<button class="call-btn cb-red" onclick="endCall()" aria-label="Encerrar">${ic('phone-off',24)}</button>`}
     </div>
   </div>`;
 }
